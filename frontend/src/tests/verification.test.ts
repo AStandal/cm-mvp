@@ -30,7 +30,7 @@ describe('Frontend Verification Suite', () => {
         'tsconfig.json',
         'tsconfig.node.json',
         'vite.config.ts',
-        '.eslintrc.json',
+        'eslint.config.js',
         '.env.example',
         'tailwind.config.js',
         'index.html'

@@ -12,7 +12,11 @@
     "test:watch": "vitest",
     "test:verify": "vitest --run src/tests/verification.test.ts",
     "lint": "eslint src --ext .ts --fix",
-    "verify": "npm run build && npm run lint && npm run test && npm run test:verify"
+    "audit": "npm audit",
+    "audit:fix": "npm audit fix",
+    "audit:force": "npm audit fix --force",
+    "security": "npm audit --audit-level moderate",
+    "verify": "npm run build && npm run lint && npm run test && npm run test:verify && npm run security"
   },
   "dependencies": {
     "cors": "^2.8.5",

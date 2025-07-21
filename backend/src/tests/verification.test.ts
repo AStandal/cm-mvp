@@ -30,7 +30,7 @@ describe('Backend Verification Suite', () => {
       const requiredFiles = [
         'package.json',
         'tsconfig.json',
-        '.eslintrc.json',
+        'eslint.config.js',
         '.env.example'
       ];
 
