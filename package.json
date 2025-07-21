@@ -1,0 +1,35 @@
+{
+  "name": "ai-case-management-system",
+  "version": "1.0.0",
+  "description": "AI-powered case management system with automated processing and intelligent recommendations",
+  "type": "module",
+  "scripts": {
+    "verify": "npm run verify:backend && npm run verify:frontend",
+    "verify:backend": "cd backend && npm run verify",
+    "verify:frontend": "cd frontend && npm run verify",
+    "install:all": "npm install && cd backend && npm install && cd ../frontend && npm install",
+    "build:all": "cd backend && npm run build && cd ../frontend && npm run build",
+    "test:all": "cd backend && npm test && cd ../frontend && npm test",
+    "lint:all": "cd backend && npm run lint && cd ../frontend && npm run lint",
+    "dev:backend": "cd backend && npm run dev",
+    "dev:frontend": "cd frontend && npm run dev"
+  },
+  "keywords": [
+    "ai",
+    "case-management",
+    "automation",
+    "typescript",
+    "react",
+    "express"
+  ],
+  "author": "AI Case Management Team",
+  "license": "MIT",
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  }
+}

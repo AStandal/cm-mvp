@@ -1,0 +1,18 @@
+#!/bin/sh
+
+# Pre-commit hook to run verification tests
+# This ensures code quality before commits
+
+echo "🔍 Running pre-commit verification..."
+
+# Run the verification script
+npm run verify
+
+if [ $? -ne 0 ]; then
+    echo "❌ Pre-commit verification failed!"
+    echo "Please fix the issues above before committing."
+    exit 1
+fi
+
+echo "✅ Pre-commit verification passed!"
+exit 0
