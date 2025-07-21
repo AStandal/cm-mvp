@@ -23,7 +23,6 @@
     "express"
   ],
   "author": "AI Case Management Team",
-  "license": "MIT",
   "workspaces": [
     "backend",
     "frontend"
