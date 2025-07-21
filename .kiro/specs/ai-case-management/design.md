@@ -37,7 +37,7 @@ graph TB
 ### Technology Stack
 
 **Frontend:**
-- React 18 with TypeScript
+- React 19 with TypeScript
 - Vite for build tooling
 - Tailwind CSS for styling
 - React Query for state management and API caching
@@ -49,6 +49,7 @@ graph TB
 - OpenAI API for AI functionality
 
 **Development & Deployment:**
+- Node.js runtime with npm package manager
 - Local development with hot reload
 - Simple deployment to platforms like Railway or Render
 - Environment-based configuration
@@ -119,6 +120,8 @@ interface DataService {
   saveSummary(summary: AISummary): Promise<void>
   getAuditTrail(caseId: string): Promise<AuditEntry[]>
   logActivity(activity: ActivityLog): Promise<void>
+  logAIInteraction(interaction: AIInteraction): Promise<void>
+  getAIInteractionHistory(caseId: string): Promise<AIInteraction[]>
 }
 ```
 
@@ -204,6 +207,24 @@ enum CaseStatus {
 }
 ```
 
+#### AIInteraction
+```typescript
+interface AIInteraction {
+  id: string
+  caseId: string
+  operation: 'generate_summary' | 'generate_recommendation' | 'analyze_application' | 'generate_final_summary'
+  prompt: string
+  response: string
+  model: string
+  tokensUsed: number
+  cost?: number
+  duration: number
+  success: boolean
+  error?: string
+  timestamp: Date
+}
+```
+
 ### Database Schema
 
 #### Cases Table
@@ -255,6 +276,25 @@ CREATE TABLE audit_trail (
   action TEXT NOT NULL,
   details TEXT, -- JSON
   user_id TEXT NOT NULL,
+  timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (case_id) REFERENCES cases(id)
+);
+```
+
+#### AI Interactions Table
+```sql
+CREATE TABLE ai_interactions (
+  id TEXT PRIMARY KEY,
+  case_id TEXT NOT NULL,
+  operation TEXT NOT NULL, -- 'generate_summary', 'generate_recommendation', etc.
+  prompt TEXT NOT NULL,
+  response TEXT NOT NULL,
+  model TEXT NOT NULL,
+  tokens_used INTEGER,
+  cost REAL,
+  duration INTEGER, -- milliseconds
+  success BOOLEAN NOT NULL,
+  error TEXT,
   timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (case_id) REFERENCES cases(id)
 );
