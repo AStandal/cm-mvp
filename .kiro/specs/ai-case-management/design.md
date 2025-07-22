@@ -19,7 +19,7 @@ The AI-powered case management system is designed as a lightweight, single-page 
 graph TB
     UI[React Frontend] --> API[Express.js API Server]
     API --> DB[(SQLite Database)]
-    API --> AI[OpenAI API]
+    API --> AI[Grok AI API]
     API --> FS[File System Storage]
     
     subgraph "Core Components"
@@ -46,7 +46,7 @@ graph TB
 - Node.js with Express.js
 - TypeScript for type safety
 - SQLite with better-sqlite3 for database
-- OpenAI API for AI functionality
+- Grok AI API (X.AI) for AI functionality
 
 **Development & Deployment:**
 - Node.js runtime with npm package manager

@@ -23,9 +23,9 @@
   - _Requirements: 4.1, 4.2, 4.3, 4.6_
 
 - [ ] 3. Create AI service integration
-- [ ] 3.1 Implement AIService with OpenAI integration
+- [ ] 3.1 Implement AIService with Grok AI integration
   - Code AIService class with methods for generateOverallSummary, generateStepRecommendation, analyzeApplication
-  - Implement OpenAI API client with proper error handling and retry logic
+  - Implement Grok AI API client with proper error handling and retry logic
   - Add AI interaction logging to all AI service methods
   - _Requirements: 1.3, 1.4, 2.2, 2.5, 3.1, 4.2_
 
