@@ -1,0 +1,28 @@
+{
+  "enabled": true,
+  "name": "Pre-Completion Verification",
+  "description": "Before completing any task or subtask, this hook runs git status to verify all modified and untracked files are needed, removes unnecessary files/code, and runs the complete test suite including new tests for the current task. Only allows task completion when all tests pass successfully.",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "backend/src/**/*",
+      "frontend/src/**/*",
+      "backend/package.json",
+      "frontend/package.json",
+      "package.json",
+      "backend/tsconfig.json",
+      "frontend/tsconfig.json",
+      "backend/test/**/*",
+      "frontend/test/**/*",
+      "**/*.test.ts",
+      "**/*.test.js",
+      "**/*.spec.ts",
+      "**/*.spec.js"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "A task or subtask appears to be nearing completion. Before marking it as complete, please:\n\n1. Run \"git status\" to check all modified and untracked files\n2. Review each modified/new file and its contents to ensure they are needed for the current task\n3. Remove any files or code that are not needed for the task\n4. Ensure any new functionality has corresponding tests\n5. Run the complete verification suite using \"npm run verify\" from the root directory\n6. Verify all tests pass successfully\n7. Only after all tests pass can the task be marked as completed\n\nFocus on code quality, test coverage, and removing any unnecessary changes that don't contribute to the task objectives."
+  }
+}

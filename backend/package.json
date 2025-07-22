@@ -16,24 +16,24 @@
     "audit:fix": "npm audit fix",
     "audit:force": "npm audit fix --force",
     "security": "npm audit --audit-level moderate",
-    "verify": "npm run build && npm run lint && npm run test && npm run test:verify && npm run security"
+    "verify": "npm run build && npm run lint && npm run test && npm run security"
   },
   "dependencies": {
+    "better-sqlite3": "^12.2.0",
     "cors": "^2.8.5",
     "dotenv": "^17.2.0",
     "express": "^5.1.0",
     "helmet": "^8.1.0",
     "openai": "^5.10.1",
-    "sqlite3": "^5.1.7",
     "uuid": "^11.1.0",
     "zod": "^4.0.5"
   },
   "devDependencies": {
     "@eslint/js": "^9.31.0",
+    "@types/better-sqlite3": "^7.6.13",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.3",
     "@types/node": "^24.0.15",
-    "@types/sqlite3": "^5.1.0",
     "@types/supertest": "^6.0.3",
     "@types/uuid": "^10.0.0",
     "@typescript-eslint/eslint-plugin": "^8.38.0",

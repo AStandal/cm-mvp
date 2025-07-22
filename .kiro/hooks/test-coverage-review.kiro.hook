@@ -1,0 +1,19 @@
+{
+  "enabled": true,
+  "name": "Test Coverage Review",
+  "description": "Triggers when new test files are created to review test coverage quality and suggest additional meaningful tests",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "**/*.test.ts",
+      "**/*.test.tsx",
+      "**/*.spec.ts",
+      "**/*.spec.tsx"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "New tests have been created for a task or subtask. Please analyze the test files and answer these questions:\n\n1. How confident are you that the coverage is good and that the tests are providing value?\n2. Are there any other tests that should be added to increase test scope in a meaningful way?\n\nConsider:\n- Edge cases and error conditions\n- Integration points between components\n- Business logic validation\n- User interaction flows\n- API endpoint coverage\n- Data validation and transformation\n- Performance and scalability concerns\n\nProvide specific recommendations for additional tests that would meaningfully improve the test suite."
+  }
+}

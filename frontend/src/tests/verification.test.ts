@@ -1,10 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { promisify } from 'util';
-import { exec } from 'child_process';
 import fs from 'fs/promises';
 import path from 'path';
-
-const execAsync = promisify(exec);
 
 describe('Frontend Verification Suite', () => {
   describe('Project Structure', () => {
@@ -58,53 +54,8 @@ describe('Frontend Verification Suite', () => {
     });
   });
 
-  describe('TypeScript Compilation', () => {
-    it('should compile without critical errors', async () => {
-      try {
-        const { stderr } = await execAsync('npm run build -- --noEmit');
-        
-        // Check for critical TypeScript errors, but allow warnings
-        const criticalErrors = stderr.includes('error TS') && 
-                              !stderr.includes('TS2307') && // Ignore module not found errors
-                              !stderr.includes('TS2691'); // Ignore import errors
-                              
-        expect(criticalErrors).toBe(false);
-      } catch (error: any) {
-        // If the build command fails but doesn't have critical errors, it's acceptable
-        if (error.stderr && 
-            (!error.stderr.includes('error TS') || 
-             error.stderr.includes('TS2307') || 
-             error.stderr.includes('TS2691'))) {
-          return;
-        }
-        
-        // If it's just the verification test file causing issues, that's acceptable
-        if (error.stderr && error.stderr.includes('verification.test.ts')) {
-          return;
-        }
-        
-        throw new Error(`TypeScript compilation failed with critical errors`);
-      }
-    });
-  });
-
-  describe('Linting', () => {
-    it('should pass ESLint checks', async () => {
-      try {
-        const { stderr } = await execAsync('npm run lint');
-        // Should not contain any errors (warnings are acceptable)
-        expect(stderr).not.toContain('✖');
-        expect(stderr).not.toContain('error');
-      } catch (error: any) {
-        // If exit code is non-zero due to warnings, check the output
-        if (error.stdout && !error.stdout.includes('✖') && !error.stdout.includes('error')) {
-          // Only warnings, which is acceptable
-          return;
-        }
-        throw new Error(`ESLint failed: ${error.message}`);
-      }
-    });
-  });
+  // Note: TypeScript compilation and linting are tested separately in the verify command
+  // to avoid redundant execution
 
   describe('Dependencies', () => {
     it('should have all required dependencies installed', async () => {

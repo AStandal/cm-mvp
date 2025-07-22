@@ -15,7 +15,7 @@
     "audit:fix": "npm audit fix",
     "audit:force": "npm audit fix --force",
     "security": "npm audit --audit-level moderate",
-    "verify": "npm run build && npm run lint && npm run test && npm run test:verify && npm run security"
+    "verify": "npm run build && npm run lint && npm run test && npm run security"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.83.0",
