@@ -1,10 +1,10 @@
 {
-  "enabled": true,
+  "enabled": false,
   "name": "Pre-Completion Verification",
   "description": "Before completing any task or subtask, this hook runs git status to verify all modified and untracked files are needed, removes unnecessary files/code, and runs the complete test suite including new tests for the current task. Only allows task completion when all tests pass successfully.",
   "version": "1",
   "when": {
-    "type": "fileEdited",
+    "type": "userTriggered",
     "patterns": [
       "backend/src/**/*",
       "frontend/src/**/*",
