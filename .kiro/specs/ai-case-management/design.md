@@ -56,9 +56,23 @@ graph TB
 
 ### System Flow
 
-1. **Application Submission** → Case creation with AI analysis
-2. **Case Management** → Continuous AI assistance and recommendations
-3. **Case Conclusion** → AI-powered decision support and final documentation
+1. **Application Submission** → Case creation with AI analysis and missing field detection
+2. **Case Management** → Continuous AI assistance, recommendations, and automatic summary updates when notes are added
+3. **Case Conclusion** → AI-powered decision support, completeness validation, and final documentation generation
+
+**Key Design Decision**: The system automatically regenerates AI summaries when case notes are added (Requirement 2.4), ensuring that AI insights remain current and incorporate all available information throughout the case lifecycle.
+
+### AI Summary Update Workflow
+
+When case notes are added, the system follows this workflow to maintain current AI insights:
+
+1. **Note Addition** → User adds a case note through the CaseService.addCaseNote() method
+2. **Automatic Trigger** → The system automatically triggers AIService.generateOverallSummary() with updated case data
+3. **Summary Regeneration** → AI generates a new overall summary incorporating the new note information
+4. **Version Management** → The new summary is stored with an incremented version number
+5. **UI Update** → Frontend components automatically refresh to display the updated AI insights
+
+This ensures that AI summaries always reflect the most current case information and provide relevant recommendations based on all available data.
 
 ## Components and Interfaces
 
@@ -110,8 +124,12 @@ interface AIService {
   generateStepRecommendation(caseData: Case, step: ProcessStep): Promise<AIRecommendation>
   analyzeApplication(applicationData: ApplicationData): Promise<ApplicationAnalysis>
   generateFinalSummary(caseData: Case): Promise<FinalSummary>
+  validateCaseCompleteness(caseData: Case): Promise<CompletenessValidation>
+  detectMissingFields(applicationData: ApplicationData): Promise<MissingFieldsAnalysis>
 }
 ```
+
+**Design Rationale**: The AIService.validateCaseCompleteness() method supports Requirement 3.3 by providing AI-powered validation that all required steps have been completed before case conclusion, ensuring proper case closure procedures.
 
 #### DataService
 ```typescript
@@ -212,7 +230,7 @@ enum CaseStatus {
 interface AIInteraction {
   id: string
   caseId: string
-  operation: 'generate_summary' | 'generate_recommendation' | 'analyze_application' | 'generate_final_summary'
+  operation: 'generate_summary' | 'generate_recommendation' | 'analyze_application' | 'generate_final_summary' | 'validate_completeness' | 'detect_missing_fields'
   prompt: string
   response: string
   model: string
@@ -222,10 +240,89 @@ interface AIInteraction {
   success: boolean
   error?: string
   timestamp: Date
+  stepContext?: ProcessStep
+  promptTemplate?: string
+  promptVersion?: string
+}
+```
+
+**Design Rationale**: The AIInteraction model includes promptTemplate and promptVersion fields to support Requirement 4.2, enabling future prompt improvements and evaluations by tracking which specific prompts generated which AI responses.
+
+#### CompletenessValidation
+```typescript
+interface CompletenessValidation {
+  isComplete: boolean
+  missingSteps: ProcessStep[]
+  missingDocuments: string[]
+  recommendations: string[]
+  confidence: number
+  validatedAt: Date
+}
+```
+
+#### MissingFieldsAnalysis
+```typescript
+interface MissingFieldsAnalysis {
+  missingFields: {
+    fieldName: string
+    fieldType: string
+    importance: 'required' | 'recommended' | 'optional'
+    suggestedAction: string
+  }[]
+  completenessScore: number
+  priorityActions: string[]
+  estimatedCompletionTime: string
+  analysisTimestamp: Date
+}
+```
+
+#### ApplicationAnalysis
+```typescript
+interface ApplicationAnalysis {
+  summary: string
+  keyPoints: string[]
+  potentialIssues: string[]
+  recommendedActions: string[]
+  priorityLevel: 'low' | 'medium' | 'high' | 'urgent'
+  estimatedProcessingTime: string
+  requiredDocuments: string[]
+  analysisTimestamp: Date
+}
+```
+
+#### AIRecommendation
+```typescript
+interface AIRecommendation {
+  step: ProcessStep
+  recommendations: string[]
+  nextSteps: string[]
+  requiredDocumentation: string[]
+  potentialIssues: string[]
+  confidence: number
+  generatedAt: Date
+}
+```
+
+#### FinalSummary
+```typescript
+interface FinalSummary {
+  overallSummary: string
+  keyDecisions: string[]
+  outcomes: string[]
+  processHistory: string[]
+  recommendedDecision: 'approved' | 'denied' | 'requires_additional_info'
+  supportingRationale: string[]
+  generatedAt: Date
 }
 ```
 
 ### Database Schema
+
+**Design Rationale**: The database schema is designed to support efficient querying for reporting and analytics (Requirement 4.6). Key design decisions include:
+- Indexed fields for common query patterns (status, date ranges, case type)
+- Normalized structure to enable aggregation of case metrics and processing times
+- Comprehensive audit trail for compliance and performance analysis
+- AI interaction logging for usage pattern analysis and cost tracking
 
 #### Cases Table
 ```sql
@@ -296,6 +393,9 @@ CREATE TABLE ai_interactions (
   success BOOLEAN NOT NULL,
   error TEXT,
   timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+  step_context TEXT, -- ProcessStep context
+  prompt_template TEXT, -- Template used for prompt generation
+  prompt_version TEXT, -- Version of the prompt template
   FOREIGN KEY (case_id) REFERENCES cases(id)
 );
 ```
