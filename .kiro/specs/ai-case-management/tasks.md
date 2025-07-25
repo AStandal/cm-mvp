@@ -39,8 +39,7 @@
   - Write unit tests with mocked OpenRouter API responses for all AIService methods
   - _Requirements: 1.3, 1.4, 1.5, 2.2, 2.5, 2.6, 3.1, 3.2, 3.3, 4.2_
 
-- [-] 3.3 Refactor AI prompt templates and enhance response validation
-
+- [x] 3.3 Refactor AI prompt templates and enhance response validation
   - Extract hardcoded prompt templates from AIService methods into a centralized PromptTemplateService with versioning support
   - Implement enhanced JSON schema validation for AI responses with proper error handling
   - Add comprehensive unit tests for prompt template generation, response validation logic, and error scenarios
