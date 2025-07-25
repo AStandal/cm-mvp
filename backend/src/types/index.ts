@@ -166,3 +166,6 @@ export interface DataService {
   logAIInteraction(interaction: AIInteraction): Promise<void>;
   getAIInteractionHistory(caseId: string): Promise<AIInteraction[]>;
 }
+
+// Re-export OpenRouter types
+export * from './openrouter.js';

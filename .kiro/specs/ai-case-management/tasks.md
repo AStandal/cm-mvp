@@ -25,7 +25,7 @@
   - _Requirements: 4.1, 4.2, 4.3, 4.6_
 
 - [ ] 3. Create basic AI service integration
-- [ ] 3.1 Implement basic OpenRouter client
+- [x] 3.1 Implement basic OpenRouter client
   - Code simple OpenRouterClient class with basic API access to one default model (Grok)
   - Implement basic API call functionality with error handling and retry logic
   - Add environment configuration for OpenRouter API key and default model
