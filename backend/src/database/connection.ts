@@ -7,15 +7,24 @@ export class DatabaseConnection {
   private db: Database.Database;
   private readonly dbPath: string;
 
-  private constructor() {
-    // Create data directory if it doesn't exist
-    const dataDir = path.join(process.cwd(), 'data');
-    if (!fs.existsSync(dataDir)) {
-      fs.mkdirSync(dataDir, { recursive: true });
+  private constructor(customPath?: string) {
+    // Use custom path for testing or default path for production
+    if (customPath) {
+      this.dbPath = customPath;
+    } else {
+      // Create data directory if it doesn't exist
+      const dataDir = path.join(process.cwd(), 'data');
+      if (!fs.existsSync(dataDir)) {
+        fs.mkdirSync(dataDir, { recursive: true });
+      }
+      this.dbPath = path.join(dataDir, 'case_management.db');
     }
-
-    // Set database path
-    this.dbPath = path.join(dataDir, 'case_management.db');
+    
+    // Ensure directory exists for custom paths
+    const dir = path.dirname(this.dbPath);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
     
     // Initialize database connection
     this.db = new Database(this.dbPath);
@@ -23,17 +32,38 @@ export class DatabaseConnection {
     // Enable foreign keys
     this.db.pragma('foreign_keys = ON');
     
-    // Set WAL mode for better performance
-    this.db.pragma('journal_mode = WAL');
+    // Set WAL mode for better performance in production, but use DELETE mode for tests
+    if (process.env.NODE_ENV === 'test') {
+      this.db.pragma('journal_mode = DELETE');
+      this.db.pragma('synchronous = OFF');
+    } else {
+      this.db.pragma('journal_mode = WAL');
+    }
     
     console.log(`Database connected: ${this.dbPath}`);
   }
 
-  public static getInstance(): DatabaseConnection {
-    if (!DatabaseConnection.instance) {
-      DatabaseConnection.instance = new DatabaseConnection();
+  public static getInstance(customPath?: string): DatabaseConnection {
+    if (!DatabaseConnection.instance || customPath) {
+      if (DatabaseConnection.instance && customPath) {
+        // Close existing connection if we need a new path
+        try {
+          DatabaseConnection.instance.close();
+        } catch (error) {
+          // Ignore close errors during test cleanup
+          console.warn('Warning: Error closing database connection:', error);
+        }
+      }
+      DatabaseConnection.instance = new DatabaseConnection(customPath);
     }
     return DatabaseConnection.instance;
+  }
+
+  public static resetInstance(): void {
+    if (DatabaseConnection.instance) {
+      DatabaseConnection.instance.close();
+      DatabaseConnection.instance = null as any;
+    }
   }
 
   public getDatabase(): Database.Database {
@@ -42,8 +72,12 @@ export class DatabaseConnection {
 
   public close(): void {
     if (this.db) {
-      this.db.close();
-      console.log('Database connection closed');
+      try {
+        this.db.close();
+        console.log('Database connection closed');
+      } catch (error) {
+        console.warn('Warning: Error closing database:', error);
+      }
     }
   }
 

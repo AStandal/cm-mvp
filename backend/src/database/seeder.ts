@@ -334,10 +334,17 @@ export class DatabaseSeeder {
     console.log('Clearing database...');
 
     const tables = ['ai_interactions', 'audit_trail', 'case_notes', 'ai_summaries', 'cases'];
+    const existingTables = this.getExistingTables();
     
     this.db.transaction(() => {
       tables.forEach(table => {
-        this.db.exec(`DELETE FROM ${table}`);
+        if (existingTables.includes(table)) {
+          try {
+            this.db.exec(`DELETE FROM ${table}`);
+          } catch (error) {
+            console.warn(`Failed to clear table ${table}:`, error);
+          }
+        }
       });
     });
 
@@ -348,12 +355,39 @@ export class DatabaseSeeder {
     const tables = ['cases', 'ai_summaries', 'case_notes', 'audit_trail', 'ai_interactions'];
     const counts: Record<string, number> = {};
 
+    // Get list of existing tables first
+    const existingTables = this.getExistingTables();
+
     tables.forEach(table => {
-      const stmt = this.db.prepare(`SELECT COUNT(*) as count FROM ${table}`);
-      const result = stmt.get() as { count: number };
-      counts[table] = result.count;
+      if (existingTables.includes(table)) {
+        try {
+          const stmt = this.db.prepare(`SELECT COUNT(*) as count FROM ${table}`);
+          const result = stmt.get() as { count: number };
+          counts[table] = result.count;
+        } catch (error) {
+          console.warn(`Failed to get count for table ${table}:`, error);
+          counts[table] = 0;
+        }
+      } else {
+        counts[table] = 0;
+      }
     });
 
     return counts;
+  }
+
+  private getExistingTables(): string[] {
+    try {
+      const stmt = this.db.prepare(`
+        SELECT name FROM sqlite_master 
+        WHERE type='table' AND name NOT LIKE 'sqlite_%'
+        ORDER BY name
+      `);
+      const tables = stmt.all() as { name: string }[];
+      return tables.map(t => t.name);
+    } catch (error) {
+      console.warn('Failed to get existing tables:', error);
+      return [];
+    }
   }
 }

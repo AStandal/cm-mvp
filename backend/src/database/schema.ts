@@ -10,17 +10,34 @@ export class DatabaseSchema {
     public initializeSchema(): void {
         console.log('Initializing database schema...');
 
-        // Create tables in order (respecting foreign key dependencies)
-        this.createCasesTable();
-        this.createAISummariesTable();
-        this.createCaseNotesTable();
-        this.createAuditTrailTable();
-        this.createAIInteractionsTable();
+        try {
+            // Use a transaction to ensure atomicity for table creation
+            this.db.transaction(() => {
+                // Create tables in order (respecting foreign key dependencies)
+                this.createCasesTable();
+                this.createAISummariesTable();
+                this.createCaseNotesTable();
+                this.createAuditTrailTable();
+                this.createAIInteractionsTable();
+                
+                // Create indexes within the same transaction to ensure tables exist
+                this.createIndexesInTransaction();
+            });
 
-        // Create indexes for better performance
-        this.createIndexes();
+            // Verify all tables were created
+            const tables = this.listTables();
+            const requiredTables = ['cases', 'ai_summaries', 'case_notes', 'audit_trail', 'ai_interactions'];
+            const missingTables = requiredTables.filter(table => !tables.includes(table));
+            
+            if (missingTables.length > 0) {
+                throw new Error(`Failed to create tables: ${missingTables.join(', ')}`);
+            }
 
-        console.log('Database schema initialized successfully');
+            console.log('Database schema initialized successfully');
+        } catch (error) {
+            console.error('Failed to initialize database schema:', error);
+            throw error;
+        }
     }
 
     private createCasesTable(): void {
@@ -94,7 +111,7 @@ export class DatabaseSchema {
       CREATE TABLE IF NOT EXISTS ai_interactions (
         id TEXT PRIMARY KEY,
         case_id TEXT NOT NULL,
-        operation TEXT NOT NULL CHECK (operation IN ('generate_summary', 'generate_recommendation', 'analyze_application', 'generate_final_summary')),
+        operation TEXT NOT NULL CHECK (operation IN ('generate_summary', 'generate_recommendation', 'analyze_application', 'generate_final_summary', 'validate_completeness', 'detect_missing_fields')),
         prompt TEXT NOT NULL,
         response TEXT NOT NULL,
         model TEXT NOT NULL,
@@ -104,6 +121,9 @@ export class DatabaseSchema {
         success BOOLEAN NOT NULL,
         error TEXT,
         timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+        step_context TEXT,
+        prompt_template TEXT,
+        prompt_version TEXT,
         FOREIGN KEY (case_id) REFERENCES cases(id) ON DELETE CASCADE
       );
     `;
@@ -111,7 +131,7 @@ export class DatabaseSchema {
         console.log('Created ai_interactions table');
     }
 
-    private createIndexes(): void {
+    private createIndexesInTransaction(): void {
         const indexes = [
             'CREATE INDEX IF NOT EXISTS idx_cases_status ON cases(status);',
             'CREATE INDEX IF NOT EXISTS idx_cases_current_step ON cases(current_step);',
@@ -130,22 +150,37 @@ export class DatabaseSchema {
         ];
 
         indexes.forEach(indexSql => {
-            this.db.exec(indexSql);
+            try {
+                this.db.exec(indexSql);
+            } catch (error) {
+                console.error(`Failed to create index: ${indexSql}`, error);
+                // Don't throw on index creation failure - log and continue
+                console.warn('Continuing without this index...');
+            }
         });
 
         console.log('Created database indexes');
     }
 
+
+
     public dropAllTables(): void {
         console.log('Dropping all tables...');
 
-        const tables = ['ai_interactions', 'audit_trail', 'case_notes', 'ai_summaries', 'cases'];
+        try {
+            // Use a transaction to ensure atomicity
+            this.db.transaction(() => {
+                const tables = ['ai_interactions', 'audit_trail', 'case_notes', 'ai_summaries', 'cases'];
+                tables.forEach(table => {
+                    this.db.exec(`DROP TABLE IF EXISTS ${table};`);
+                });
+            });
 
-        tables.forEach(table => {
-            this.db.exec(`DROP TABLE IF EXISTS ${table};`);
-        });
-
-        console.log('All tables dropped');
+            console.log('All tables dropped');
+        } catch (error) {
+            console.error('Failed to drop tables:', error);
+            throw error;
+        }
     }
 
     public getTableInfo(tableName: string): any[] {
@@ -177,9 +212,14 @@ export class DatabaseSchema {
 
             // Validate each table structure
             for (const table of expectedTables) {
-                const tableInfo = this.getTableInfo(table);
-                if (tableInfo.length === 0) {
-                    console.error(`Table ${table} has no columns`);
+                try {
+                    const tableInfo = this.getTableInfo(table);
+                    if (tableInfo.length === 0) {
+                        console.error(`Table ${table} has no columns`);
+                        return false;
+                    }
+                } catch (error) {
+                    console.error(`Failed to get table info for ${table}:`, error);
                     return false;
                 }
             }

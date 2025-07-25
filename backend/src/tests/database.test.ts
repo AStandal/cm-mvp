@@ -1,22 +1,61 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, beforeAll, afterAll } from 'vitest';
 import { DatabaseConnection } from '../database/connection.js';
 import { DatabaseSchema } from '../database/schema.js';
 import { DatabaseSeeder } from '../database/seeder.js';
 import { MigrationManager, initialMigrations } from '../database/migrations.js';
 import { DatabaseManager } from '../database/index.js';
 import { ProcessStep } from '../types/database.js';
+import path from 'path';
+import fs from 'fs';
 
 describe('Database Connection', () => {
   let connection: DatabaseConnection;
+  let testDbPath: string;
+
+  beforeAll(() => {
+    // Create a unique test database for this test suite
+    const testId = `database_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    testDbPath = path.join(process.cwd(), 'test_data', `${testId}.db`);
+
+    // Ensure test directory exists
+    const testDir = path.dirname(testDbPath);
+    if (!fs.existsSync(testDir)) {
+      fs.mkdirSync(testDir, { recursive: true });
+    }
+
+    // Set test environment
+    process.env.NODE_ENV = 'test';
+
+    // Reset and create new connection with test database
+    DatabaseConnection.resetInstance();
+    connection = DatabaseConnection.getInstance(testDbPath);
+  });
+
+  afterAll(() => {
+    // Clean up test database
+    if (connection) {
+      connection.close();
+    }
+    DatabaseConnection.resetInstance();
+    
+    if (fs.existsSync(testDbPath)) {
+      try {
+        fs.unlinkSync(testDbPath);
+      } catch (error) {
+        console.warn(`Failed to delete test database: ${error}`);
+      }
+    }
+  });
 
   beforeEach(() => {
-    connection = DatabaseConnection.getInstance();
+    // Connection is already established in beforeAll
   });
 
   afterEach(() => {
     // Clean up any test tables
     try {
       connection.exec('DROP TABLE IF EXISTS test_table');
+      connection.exec('DROP TABLE IF EXISTS test_table2');
     } catch (error) {
       // Ignore cleanup errors
     }
@@ -814,11 +853,18 @@ describe('Database - Performance', () => {
   });
 
   it('should use indexes for common queries', () => {
-    // Insert test data
-    const stmt = connection.prepare('INSERT INTO cases (id, application_data, status, current_step) VALUES (?, ?, ?, ?)');
-    for (let i = 0; i < 1000; i++) {
-      stmt.run(`case-${i}`, '{}', i % 2 === 0 ? 'active' : 'pending', 'received');
-    }
+    // Insert test data in a transaction for consistency
+    connection.transaction(() => {
+      const stmt = connection.prepare('INSERT INTO cases (id, application_data, status, current_step) VALUES (?, ?, ?, ?)');
+      for (let i = 0; i < 1000; i++) {
+        stmt.run(`case-${i}`, '{}', i % 2 === 0 ? 'active' : 'pending', 'received');
+      }
+    });
+    
+    // Verify total count first
+    const totalStmt = connection.prepare('SELECT COUNT(*) as count FROM cases');
+    const totalResult = totalStmt.get() as {count: number};
+    expect(totalResult.count).toBe(1000);
     
     // Query should be fast due to index on status
     const start = Date.now();

@@ -68,7 +68,7 @@ export interface AISummary {
 export interface AIInteraction {
   id: string;
   caseId: string;
-  operation: 'generate_summary' | 'generate_recommendation' | 'analyze_application' | 'generate_final_summary';
+  operation: 'generate_summary' | 'generate_recommendation' | 'analyze_application' | 'generate_final_summary' | 'validate_completeness' | 'detect_missing_fields';
   prompt: string;
   response: string;
   model: string;
@@ -78,6 +78,9 @@ export interface AIInteraction {
   success: boolean;
   error?: string;
   timestamp: Date;
+  stepContext?: ProcessStep;
+  promptTemplate?: string;
+  promptVersion?: string;
 }
 
 export interface Case {

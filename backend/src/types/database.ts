@@ -40,7 +40,7 @@ export interface AuditEntry {
 export interface AIInteraction {
   id: string;
   case_id: string;
-  operation: 'generate_summary' | 'generate_recommendation' | 'analyze_application' | 'generate_final_summary';
+  operation: 'generate_summary' | 'generate_recommendation' | 'analyze_application' | 'generate_final_summary' | 'validate_completeness' | 'detect_missing_fields';
   prompt: string;
   response: string;
   model: string;
@@ -50,6 +50,9 @@ export interface AIInteraction {
   success: boolean;
   error?: string;
   timestamp: string; // ISO date string
+  step_context?: string; // ProcessStep context
+  prompt_template?: string; // Template used for prompt generation
+  prompt_version?: string; // Version of the prompt template
 }
 
 export enum CaseStatus {
