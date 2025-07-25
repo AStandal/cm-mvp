@@ -32,7 +32,7 @@
   - Write unit tests for basic OpenRouter integration with mocked API responses
   - _Requirements: 5.1, 5.3_
 
-- [ ] 3.2 Implement core AIService operations
+- [x] 3.2 Implement core AIService operations
   - Code AIService class with methods for generateOverallSummary, generateStepRecommendation, analyzeApplication, generateFinalSummary, validateCaseCompleteness, detectMissingFields
   - Integrate with basic OpenRouter client for AI API calls
   - Add AI interaction logging to all AI service methods

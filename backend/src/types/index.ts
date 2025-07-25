@@ -107,20 +107,46 @@ export interface AIRecommendation {
 }
 
 export interface ApplicationAnalysis {
-  completeness: number;
-  missingFields: string[];
-  suggestedActions: string[];
-  riskLevel: 'low' | 'medium' | 'high';
   summary: string;
+  keyPoints: string[];
+  potentialIssues: string[];
+  recommendedActions: string[];
+  priorityLevel: 'low' | 'medium' | 'high' | 'urgent';
+  estimatedProcessingTime: string;
+  requiredDocuments: string[];
+  analysisTimestamp: Date;
 }
 
 export interface FinalSummary {
-  caseId: string;
-  decision: string;
-  rationale: string;
+  overallSummary: string;
   keyDecisions: string[];
+  outcomes: string[];
   processHistory: string[];
+  recommendedDecision: 'approved' | 'denied' | 'requires_additional_info';
+  supportingRationale: string[];
   generatedAt: Date;
+}
+
+export interface CompletenessValidation {
+  isComplete: boolean;
+  missingSteps: ProcessStep[];
+  missingDocuments: string[];
+  recommendations: string[];
+  confidence: number;
+  validatedAt: Date;
+}
+
+export interface MissingFieldsAnalysis {
+  missingFields: {
+    fieldName: string;
+    fieldType: string;
+    importance: 'required' | 'recommended' | 'optional';
+    suggestedAction: string;
+  }[];
+  completenessScore: number;
+  priorityActions: string[];
+  estimatedCompletionTime: string;
+  analysisTimestamp: Date;
 }
 
 export interface ActivityLog {
@@ -156,6 +182,8 @@ export interface AIService {
   generateStepRecommendation(caseData: Case, step: ProcessStep): Promise<AIRecommendation>;
   analyzeApplication(applicationData: ApplicationData): Promise<ApplicationAnalysis>;
   generateFinalSummary(caseData: Case): Promise<FinalSummary>;
+  validateCaseCompleteness(caseData: Case): Promise<CompletenessValidation>;
+  detectMissingFields(applicationData: ApplicationData): Promise<MissingFieldsAnalysis>;
 }
 
 export interface DataService {
