@@ -116,11 +116,37 @@ COLLECT_USER_FEEDBACK=true
 
 ### System Flow
 
-1. **Application Submission** → Case creation with AI analysis and missing field detection
-2. **Case Management** → Continuous AI assistance, recommendations, and automatic summary updates when notes are added
-3. **Case Conclusion** → AI-powered decision support, completeness validation, and final documentation generation
+The system implements a three-stage case processing workflow as specified in the requirements:
+
+#### Stage 1: Receive Applications (Requirements 1.1-1.6)
+1. **Application Submission** → New application data is submitted through the frontend interface
+2. **Automatic Case Creation** → System creates a new case record with unique identifier and "Received" status
+3. **Data Extraction** → Key application data (applicant info, type, submission date) is extracted and stored
+4. **AI Analysis** → AI generates comprehensive overall case summary highlighting key points and potential issues
+5. **Step-Specific Recommendations** → AI provides specific recommendations for the "Receive Application" step
+6. **Missing Field Detection** → AI identifies incomplete information and suggests follow-up actions
+
+#### Stage 2: Case Management (Requirements 2.1-2.6)
+1. **Continuous AI Assistance** → Overall AI-generated case summary is continuously updated throughout the process
+2. **Step-Specific Insights** → AI provides recommendations for case management actions, next steps, and required documentation
+3. **Status Management** → Case status changes are logged with timestamps and trigger relevant AI summary regeneration
+4. **Note Integration** → Manual case notes automatically trigger overall AI case summary updates to incorporate new information
+5. **Progress Tracking** → AI provides step-specific insights based on current case state and historical data
+6. **Documentation Tracking** → System tracks outstanding requirements with AI-suggested follow-up actions
+
+#### Stage 3: Conclude Applications (Requirements 3.1-3.5)
+1. **Conclusion Recommendations** → AI provides specific recommendations for case conclusion including suggested decision and rationale
+2. **Final Summary Generation** → AI generates comprehensive final case summary with key decisions, outcomes, and process history
+3. **Completeness Validation** → AI validates that all required steps have been completed before case conclusion
+4. **Decision Support** → System requires final decision status with AI-generated decision support
+5. **Final Documentation** → System generates final documentation and archives the case with updated overall AI summary
 
 **Key Design Decision**: The system automatically regenerates AI summaries when case notes are added (Requirement 2.4), ensuring that AI insights remain current and incorporate all available information throughout the case lifecycle.
+
+**Process Step Mapping**: The ProcessStep enum provides granular tracking within the three-stage workflow:
+- **Stage 1 (Receive)**: RECEIVED
+- **Stage 2 (Manage)**: IN_REVIEW, ADDITIONAL_INFO_REQUIRED, READY_FOR_DECISION  
+- **Stage 3 (Conclude)**: CONCLUDED
 
 ### AI Summary Update Workflow
 
@@ -318,6 +344,9 @@ interface EvaluationService {
 
 ### API Endpoints
 
+**Design Rationale**: The API follows RESTful principles with comprehensive security, performance, and documentation requirements (Requirement 7). All endpoints implement authentication, input validation, rate limiting, and standardized error responses.
+
+#### Core Case Management Endpoints
 ```
 POST   /api/cases                    # Create new case
 GET    /api/cases/:id                # Get case details
@@ -326,7 +355,12 @@ POST   /api/cases/:id/notes          # Add case note
 GET    /api/cases/:id/ai-summary     # Get AI summary
 POST   /api/cases/:id/ai-refresh     # Regenerate AI insights
 GET    /api/cases/:id/audit          # Get audit trail
+POST   /api/cases/:id/documents      # Upload case documents
+GET    /api/cases                    # List cases with pagination and filtering
+```
 
+#### Model Management Endpoints
+```
 GET    /api/models                   # Get available models from OpenRouter
 GET    /api/models/current           # Get current model configuration
 PUT    /api/models/current           # Set current model
@@ -334,7 +368,10 @@ GET    /api/models/health            # Get model health status
 GET    /api/models/costs             # Get model cost information and usage stats
 POST   /api/models/test              # Test connection to a specific model
 GET    /api/models/usage             # Get detailed usage analytics per model
+```
 
+#### Evaluation and Benchmarking Endpoints
+```
 POST   /api/evaluation/datasets      # Create evaluation dataset
 POST   /api/evaluation/datasets/:id/examples # Add evaluation example
 POST   /api/evaluation/run           # Run model evaluation
@@ -345,6 +382,23 @@ GET    /api/evaluation/prompts/:id/performance # Get prompt performance metrics
 POST   /api/evaluation/ab-test       # Start A/B test
 GET    /api/evaluation/ab-test/:id   # Get A/B test results
 GET    /api/evaluation/benchmark     # Generate benchmark report
+```
+
+#### Authentication and User Management Endpoints
+```
+POST   /api/auth/login               # User authentication
+POST   /api/auth/logout              # User logout
+POST   /api/auth/refresh             # Refresh authentication token
+GET    /api/auth/profile             # Get user profile
+PUT    /api/auth/profile             # Update user profile
+```
+
+#### API Documentation and Health Endpoints
+```
+GET    /api/docs                     # API documentation (OpenAPI/Swagger)
+GET    /api/health                   # System health check
+GET    /api/version                  # API version information
+GET    /api/status                   # System status and metrics
 ```
 
 ## Data Models
@@ -930,6 +984,248 @@ CREATE TABLE ab_tests (
 );
 ```
 
+## API Security and Performance
+
+**Design Rationale**: This section addresses Requirement 7 by implementing comprehensive security, performance, and documentation standards for the REST API to ensure safe deployment and reliable operation.
+
+### Authentication and Authorization
+
+#### JWT-Based Authentication
+```typescript
+interface AuthenticationService {
+  login(credentials: LoginCredentials): Promise<AuthResponse>
+  logout(token: string): Promise<void>
+  refreshToken(refreshToken: string): Promise<AuthResponse>
+  validateToken(token: string): Promise<UserContext>
+  revokeToken(token: string): Promise<void>
+}
+
+interface AuthResponse {
+  accessToken: string
+  refreshToken: string
+  expiresIn: number
+  user: UserProfile
+}
+
+interface UserContext {
+  userId: string
+  email: string
+  roles: string[]
+  permissions: string[]
+}
+```
+
+#### Role-Based Access Control (RBAC)
+- **Case Manager**: Full access to case management operations
+- **Administrator**: System configuration and user management
+- **Viewer**: Read-only access to assigned cases
+- **API Consumer**: Programmatic access with limited scope
+
+#### Authorization Middleware
+```typescript
+interface AuthorizationMiddleware {
+  requireAuth(): ExpressMiddleware
+  requireRole(roles: string[]): ExpressMiddleware
+  requirePermission(permission: string): ExpressMiddleware
+  requireCaseAccess(caseId: string): ExpressMiddleware
+}
+```
+
+### Input Validation and Sanitization
+
+#### Request Validation Schema
+```typescript
+interface ValidationService {
+  validateCaseCreation(data: unknown): Promise<ApplicationData>
+  validateCaseUpdate(data: unknown): Promise<Partial<Case>>
+  validateCaseNote(data: unknown): Promise<CaseNoteInput>
+  validateModelConfig(data: unknown): Promise<ModelConfig>
+  sanitizeInput(input: string): string
+  validateFileUpload(file: Express.Multer.File): Promise<void>
+}
+```
+
+#### Validation Rules
+- **Input Sanitization**: HTML encoding, SQL injection prevention, XSS protection
+- **Schema Validation**: Zod-based type validation for all request bodies
+- **File Upload Validation**: File type, size limits, virus scanning
+- **Parameter Validation**: Path and query parameter type checking
+
+### Rate Limiting and Performance
+
+#### Rate Limiting Strategy
+```typescript
+interface RateLimitConfig {
+  windowMs: number
+  maxRequests: number
+  skipSuccessfulRequests: boolean
+  keyGenerator: (req: Request) => string
+  onLimitReached: (req: Request, res: Response) => void
+}
+
+// Rate limit configurations
+const rateLimits = {
+  general: { windowMs: 15 * 60 * 1000, maxRequests: 100 }, // 100 requests per 15 minutes
+  aiOperations: { windowMs: 60 * 1000, maxRequests: 10 }, // 10 AI requests per minute
+  authentication: { windowMs: 15 * 60 * 1000, maxRequests: 5 }, // 5 login attempts per 15 minutes
+  fileUpload: { windowMs: 60 * 1000, maxRequests: 5 } // 5 file uploads per minute
+}
+```
+
+#### Performance Requirements
+- **Standard Operations**: Response time < 5 seconds
+- **AI Operations**: Response time < 30 seconds with timeout handling
+- **Database Operations**: Connection pooling and transaction management
+- **Pagination**: Configurable page sizes (default: 20, max: 100)
+
+### Security Headers and CORS
+
+#### Security Middleware Configuration
+```typescript
+interface SecurityConfig {
+  helmet: {
+    contentSecurityPolicy: CSPDirectives
+    hsts: HSTSOptions
+    noSniff: boolean
+    xssFilter: boolean
+    referrerPolicy: string
+  }
+  cors: {
+    origin: string[]
+    credentials: boolean
+    methods: string[]
+    allowedHeaders: string[]
+  }
+}
+```
+
+#### CORS Configuration
+- **Allowed Origins**: Configurable whitelist of frontend domains
+- **Credentials**: Support for authenticated requests
+- **Methods**: GET, POST, PUT, DELETE, OPTIONS
+- **Headers**: Authorization, Content-Type, X-Requested-With
+
+### Error Handling and Logging
+
+#### Standardized Error Responses
+```typescript
+interface APIError {
+  code: string
+  message: string
+  details?: Record<string, any>
+  timestamp: string
+  requestId: string
+}
+
+interface ErrorResponse {
+  success: false
+  error: APIError
+  statusCode: number
+}
+```
+
+#### Error Categories
+- **400 Bad Request**: Invalid input data, validation failures
+- **401 Unauthorized**: Authentication required or invalid
+- **403 Forbidden**: Insufficient permissions
+- **404 Not Found**: Resource not found
+- **429 Too Many Requests**: Rate limit exceeded
+- **500 Internal Server Error**: System errors (sanitized for security)
+
+#### Security Logging
+```typescript
+interface SecurityLogger {
+  logAuthenticationAttempt(attempt: AuthAttempt): void
+  logAuthorizationFailure(failure: AuthFailure): void
+  logRateLimitExceeded(event: RateLimitEvent): void
+  logSuspiciousActivity(activity: SuspiciousActivity): void
+  logDataAccess(access: DataAccessEvent): void
+}
+```
+
+### File Upload Security
+
+#### Upload Validation
+```typescript
+interface FileUploadService {
+  validateFileType(file: Express.Multer.File): boolean
+  scanForViruses(file: Express.Multer.File): Promise<boolean>
+  validateFileSize(file: Express.Multer.File): boolean
+  generateSecureFilename(originalName: string): string
+  storeFile(file: Express.Multer.File, caseId: string): Promise<string>
+}
+```
+
+#### Upload Restrictions
+- **Allowed Types**: PDF, DOC, DOCX, TXT, JPG, PNG (configurable)
+- **Size Limits**: 10MB per file, 50MB total per case
+- **Virus Scanning**: Integration with ClamAV or similar
+- **Storage**: Secure file system with access controls
+
+### API Documentation
+
+#### OpenAPI/Swagger Integration
+```typescript
+interface APIDocumentation {
+  generateOpenAPISpec(): OpenAPISpec
+  serveSwaggerUI(): ExpressMiddleware
+  validateAgainstSchema(endpoint: string, data: unknown): boolean
+}
+```
+
+#### Documentation Requirements
+- **Endpoint Specifications**: Complete request/response schemas
+- **Authentication**: JWT token requirements and examples
+- **Error Responses**: All possible error codes and formats
+- **Rate Limits**: Documented limits for each endpoint category
+- **Examples**: Working request/response examples for all endpoints
+
+### API Versioning
+
+#### Version Management Strategy
+```typescript
+interface APIVersioning {
+  getCurrentVersion(): string
+  getSupportedVersions(): string[]
+  routeToVersion(version: string): ExpressRouter
+  handleDeprecation(version: string): ExpressMiddleware
+}
+```
+
+#### Versioning Approach
+- **URL Versioning**: `/api/v1/cases`, `/api/v2/cases`
+- **Header Versioning**: `Accept: application/vnd.api+json;version=1`
+- **Backward Compatibility**: Support for previous versions during transition
+- **Deprecation Notices**: Clear migration paths and timelines
+
+### Health Monitoring and Status
+
+#### Health Check Endpoints
+```typescript
+interface HealthService {
+  checkDatabaseHealth(): Promise<HealthStatus>
+  checkAIServiceHealth(): Promise<HealthStatus>
+  checkExternalDependencies(): Promise<HealthStatus[]>
+  generateSystemStatus(): Promise<SystemStatus>
+}
+
+interface SystemStatus {
+  status: 'healthy' | 'degraded' | 'unhealthy'
+  version: string
+  uptime: number
+  dependencies: {
+    database: HealthStatus
+    aiService: HealthStatus
+    openRouter: HealthStatus
+  }
+  metrics: {
+    requestsPerMinute: number
+    averageResponseTime: number
+    errorRate: number
+  }
+}
+```
+
 ## Error Handling
 
 ## OpenRouter Integration
@@ -1102,28 +1398,42 @@ The system tracks multiple performance dimensions (Requirement 6.4, 6.6):
 ## Testing Strategy
 
 ### Unit Testing
-- **Frontend**: React Testing Library for component testing
-- **Backend**: Jest for service and utility function testing
-- **AI Integration**: Mock AI responses for consistent testing
-- **Evaluation System**: Isolated testing of evaluation algorithms
+- **Frontend**: React Testing Library for component testing with accessibility validation
+- **Backend**: Vitest for service and utility function testing with 90%+ code coverage
+- **AI Integration**: Mock AI responses for consistent testing across all AI operations
+- **Evaluation System**: Isolated testing of evaluation algorithms and metrics
+- **Security Components**: Authentication, authorization, and input sanitization testing
 
 ### Integration Testing
-- **API Endpoints**: Supertest for HTTP endpoint testing
-- **Database Operations**: In-memory SQLite for isolated testing
-- **AI Service Integration**: Test with actual AI API in staging
-- **Evaluation Workflows**: End-to-end evaluation pipeline testing
+- **API Endpoints**: Supertest for HTTP endpoint testing with authentication and authorization
+- **Database Operations**: In-memory SQLite for isolated testing with transaction management
+- **AI Service Integration**: Test with actual OpenRouter API in staging environment
+- **Evaluation Workflows**: End-to-end evaluation pipeline testing with multiple models
+- **File Upload**: Secure file upload testing with validation and virus scanning
+- **Rate Limiting**: Rate limit enforcement and recovery testing
 
 ### End-to-End Testing
-- **User Workflows**: Playwright for complete case processing flows
-- **AI Integration**: Validate AI summary generation and display
-- **Error Scenarios**: Test error handling and recovery
-- **Evaluation Interface**: Test evaluation dataset management and reporting
+- **User Workflows**: Playwright for complete case processing flows from submission to conclusion
+- **AI Integration**: Validate AI summary generation, display, and model switching
+- **Error Scenarios**: Test error handling, recovery, and AI service failures
+- **Evaluation Interface**: Test evaluation dataset management, A/B testing, and reporting
+- **Security Testing**: Authentication flows, authorization checks, and input validation
+- **Performance Testing**: Load testing for concurrent users and API rate limits
+
+### API Testing
+- **Schema Validation**: OpenAPI specification compliance testing
+- **Error Response**: Standardized error format and HTTP status code validation
+- **Rate Limiting**: Rate limit enforcement across different endpoint categories
+- **CORS and Security Headers**: Cross-origin request and security header validation
+- **Documentation**: API documentation accuracy and example validation
+- **Authentication**: JWT token validation, refresh, and revocation testing
 
 ### Test Data Management
-- **Fixtures**: Standardized test cases and application data
-- **AI Mocks**: Consistent AI responses for predictable testing
-- **Database Seeding**: Automated test data setup and teardown
-- **Evaluation Datasets**: Curated test cases for AI performance validation
+- **Fixtures**: Standardized test cases and application data for consistent results
+- **AI Mocks**: Consistent AI responses for predictable testing with realistic patterns
+- **Database Seeding**: Automated test data setup and teardown with isolation
+- **Evaluation Datasets**: Curated test cases for AI performance validation and benchmarking
+- **Security Test Data**: Test cases for authentication, authorization, and input validation scenarios
 
 ## Performance Considerations
 
@@ -1144,17 +1454,62 @@ The system tracks multiple performance dimensions (Requirement 6.4, 6.6):
 
 ## Security Considerations
 
-### Data Protection
-- **Sensitive Data**: Encrypt PII in database storage
-- **API Keys**: Secure environment variable management
-- **Input Validation**: Sanitize all user inputs and file uploads
+**Design Rationale**: This section addresses the security aspects of Requirement 7, ensuring comprehensive protection of the API, data, and user interactions.
 
-### Access Control
-- **Authentication**: JWT-based user authentication
-- **Authorization**: Role-based access to cases and actions
-- **Audit Logging**: Complete activity tracking for compliance
+### Data Protection
+- **Sensitive Data**: Encrypt PII in database storage using AES-256 encryption
+- **API Keys**: Secure environment variable management with key rotation capabilities
+- **Input Validation**: Comprehensive sanitization of all user inputs, file uploads, and API parameters
+- **Data at Rest**: Database encryption and secure file storage with access controls
+- **Data in Transit**: HTTPS/TLS encryption for all API communications
+- **Data Retention**: Configurable data retention policies with secure deletion
+
+### Access Control and Authentication
+- **Authentication**: JWT-based user authentication with secure token generation and validation
+- **Authorization**: Role-based access control (RBAC) with granular permissions
+- **Session Management**: Secure session handling with token refresh and revocation
+- **Multi-Factor Authentication**: Optional MFA support for enhanced security
+- **Password Security**: Bcrypt hashing with salt for password storage
+- **Account Lockout**: Brute force protection with progressive delays
+
+### API Security
+- **Rate Limiting**: Comprehensive rate limiting per endpoint category and user
+- **CORS Configuration**: Strict cross-origin resource sharing policies
+- **Security Headers**: Helmet.js integration for security headers (CSP, HSTS, X-Frame-Options)
+- **Input Validation**: Zod-based schema validation for all request bodies and parameters
+- **SQL Injection Prevention**: Parameterized queries and ORM-based data access
+- **XSS Protection**: Input sanitization and output encoding
+
+### File Upload Security
+- **File Type Validation**: Whitelist-based file type checking
+- **Virus Scanning**: Integration with antivirus scanning for uploaded files
+- **Size Limits**: Configurable file size limits per upload and per case
+- **Secure Storage**: Isolated file storage with access controls and path traversal prevention
+- **Content Validation**: File content inspection beyond extension checking
 
 ### AI Security
-- **Prompt Injection**: Sanitize inputs to AI services
-- **Data Leakage**: Ensure AI responses don't expose sensitive data
-- **API Security**: Secure API key management and rotation
+- **Prompt Injection**: Advanced input sanitization and prompt template protection
+- **Data Leakage**: Ensure AI responses don't expose sensitive data through response filtering
+- **API Security**: Secure OpenRouter API key management with rotation and monitoring
+- **Model Access Control**: Restrict model access based on user roles and data sensitivity
+- **AI Audit Trail**: Complete logging of all AI interactions for security monitoring
+
+### Audit and Compliance
+- **Comprehensive Logging**: All user actions, API requests, and system events
+- **Security Event Monitoring**: Real-time monitoring for suspicious activities
+- **Compliance Support**: GDPR, HIPAA-ready audit trails and data handling
+- **Log Protection**: Secure log storage with integrity verification
+- **Incident Response**: Automated alerting and response procedures
+
+### Network Security
+- **HTTPS Enforcement**: Mandatory HTTPS for all communications
+- **API Gateway**: Optional API gateway integration for additional security layers
+- **IP Whitelisting**: Configurable IP-based access restrictions
+- **DDoS Protection**: Rate limiting and request throttling for DDoS mitigation
+- **Security Monitoring**: Real-time monitoring of API usage patterns
+
+### Error Handling Security
+- **Information Disclosure**: Sanitized error messages that don't expose system internals
+- **Error Logging**: Detailed error logging for debugging without exposing sensitive data
+- **Graceful Degradation**: Secure fallback mechanisms for service failures
+- **Security Headers**: Proper error response headers to prevent information leakage
