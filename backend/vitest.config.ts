@@ -10,16 +10,19 @@ export default defineConfig({
         singleFork: true,
       },
     },
-    // Set test timeout
+    // Set test timeout (longer for API tests that may include database operations)
     testTimeout: 30000,
     // Environment variables for tests
     env: {
       NODE_ENV: 'test',
+      DATABASE_PATH: 'test_data/test.db',
     },
     // Setup files
     setupFiles: [],
     // Global test configuration
     globals: true,
+    // Test isolation for API tests
+    isolate: true,
     // Coverage configuration
     coverage: {
       provider: 'v8',
@@ -32,6 +35,8 @@ export default defineConfig({
         '**/*.spec.ts',
       ],
     },
+    // Reporter configuration for better API test output
+    reporter: ['verbose'],
   },
   resolve: {
     alias: {

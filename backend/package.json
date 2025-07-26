@@ -10,13 +10,16 @@
     "start": "node dist/index.js",
     "test": "vitest --run",
     "test:watch": "vitest",
+    "test:api": "vitest --run src/tests/api.test.ts",
+    "test:api:watch": "vitest src/tests/api.test.ts",
+    "test:unit": "vitest --run --exclude src/tests/api.test.ts --exclude src/tests/api/**/*.test.ts",
     "test:verify": "vitest --run src/tests/verification.test.ts",
     "lint": "eslint src --ext .ts --fix",
     "audit": "npm audit",
     "audit:fix": "npm audit fix",
     "audit:force": "npm audit fix --force",
     "security": "npm audit --audit-level moderate",
-    "verify": "npm run build && npm run lint && npm run test && npm run security"
+    "verify": "npm run build && npm run lint && npm run test:unit && npm run test:api && npm run security"
   },
   "dependencies": {
     "axios": "^1.11.0",
