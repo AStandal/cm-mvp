@@ -69,11 +69,6 @@
   - _Requirements: 7.3, 7.7_
 
 - [x] 5.2 Implement basic API testing framework
-
-
-
-
-
   - Create dedicated API test suite with supertest for all endpoints
   - Implement test database setup and teardown for isolated API testing
   - Integrate API tests into npm run verify workflow with proper test isolation
@@ -81,24 +76,38 @@
   - _Requirements: 7.3, 7.7_
 
 - [ ] 5.3 Implement core case management API endpoints
-  - Code POST /api/cases, GET /api/cases/:id, PUT /api/cases/:id/status endpoints
-  - Implement POST /api/cases/:id/notes and GET /api/cases/:id/audit endpoints
-  - Add basic input validation and HTTP status codes
-  - Write integration tests for case management API endpoints with test database
-  - _Requirements: 1.1, 1.2, 1.6, 2.3, 2.4, 4.3_
+  - Code POST /api/cases endpoint for creating new cases with application data
+  - Implement GET /api/cases/:id endpoint for retrieving case details
+  - Add basic input validation, sanitization, and standardized HTTP status codes
+  - Write integration tests for core case creation and retrieval endpoints with test database
+  - _Requirements: 1.1, 1.2_
 
-- [ ] 5.4 Implement basic AI-related API endpoints
+- [ ] 5.4 Implement comprehensive AI-related API endpoints
   - Code GET /api/cases/:id/ai-summary and POST /api/cases/:id/ai-refresh endpoints
-  - Implement AI summary retrieval and regeneration with basic error handling
-  - Add basic timeout handling for AI operations
-  - Write integration tests for AI endpoints with mocked AI service responses
-  - _Requirements: 1.3, 1.4, 2.1, 2.2, 2.5, 3.1, 3.2, 4.2_
+  - Implement POST /api/ai/analyze-application endpoint for initial application analysis
+  - Add POST /api/ai/validate-completeness endpoint for case completion validation
+  - Implement POST /api/ai/detect-missing-fields endpoint for missing information detection
+  - Add POST /api/ai/step-recommendations endpoint for step-specific AI guidance
+  - Implement POST /api/ai/generate-final-summary endpoint for case conclusion support
+  - Add comprehensive error handling, timeout management, and AI service fallback logic
+  - Write integration tests for all AI endpoints with mocked AI service responses and error scenarios
+  - _Requirements: 1.3, 1.4, 1.5, 2.1, 2.2, 2.5, 3.1, 3.2, 3.3, 4.2, 5.4_
 
 - [ ] 5.5 Implement advanced API testing features
   - Add API contract testing to validate request/response schemas
   - Create test utilities for authentication, mocking, and data seeding
   - Add performance benchmarks for critical API endpoints
   - _Requirements: 7.12_
+
+- [ ] 5.6 Implement advanced case management API endpoints
+  - Code PUT /api/cases/:id/status endpoint for updating case status with validation
+  - Implement POST /api/cases/:id/notes endpoint for adding case notes
+  - Add GET /api/cases/:id/audit endpoint for retrieving audit trail
+  - Implement GET /api/cases endpoint with pagination, filtering, and sorting capabilities
+  - Add POST /api/cases/:id/documents endpoint for secure file upload with validation
+  - Implement comprehensive input validation, sanitization, and error handling
+  - Write integration tests for all advanced case management endpoints with test database
+  - _Requirements: 1.6, 2.3, 2.4, 4.3, 4.6_
 
 - [ ] 6. Implement comprehensive error handling and logging
 - [ ] 6.1 Create standardized error handling system

@@ -8,6 +8,7 @@
 // Import all API test suites
 import './health.api.test.js';
 import './cases.api.test.js';
+import './ai.api.test.js';
 import './models.api.test.js';
 import './evaluation.api.test.js';
 import './auth.api.test.js';
@@ -65,7 +66,7 @@ export const testSuites = [
   {
     name: 'Case Management Endpoints',
     file: 'cases.api.test.ts',
-    description: 'Tests for case management API endpoints',
+    description: 'Tests for case management API endpoints (core and advanced)',
     endpoints: [
       '/api/cases',
       '/api/cases/:id',
@@ -73,9 +74,24 @@ export const testSuites = [
       '/api/cases/:id/notes',
       '/api/cases/:id/ai-summary',
       '/api/cases/:id/ai-refresh',
-      '/api/cases/:id/audit'
+      '/api/cases/:id/audit',
+      '/api/cases/:id/documents'
     ],
-    requirements: ['1.1', '1.2', '1.6', '2.3', '2.4', '4.3']
+    requirements: ['1.1', '1.2', '1.6', '2.3', '2.4', '4.3', '4.6'],
+    tasks: ['5.3 (core: POST /api/cases, GET /api/cases/:id)', '5.6 (advanced: status, notes, audit, documents, listing)']
+  },
+  {
+    name: 'AI Service Endpoints',
+    file: 'ai.api.test.ts',
+    description: 'Tests for AI service API endpoints',
+    endpoints: [
+      '/api/ai/analyze-application',
+      '/api/ai/validate-completeness',
+      '/api/ai/detect-missing-fields',
+      '/api/ai/step-recommendations',
+      '/api/ai/generate-final-summary'
+    ],
+    requirements: ['1.3', '1.4', '1.5', '2.1', '2.2', '2.5', '3.1', '3.2', '3.3', '4.2', '5.4']
   },
   {
     name: 'Model Management Endpoints',

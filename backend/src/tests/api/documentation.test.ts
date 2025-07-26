@@ -162,6 +162,50 @@ describe('API Documentation Accuracy Tests', () => {
             email: 'test@example.com',
             password: 'testpassword'
           }
+        },
+        {
+          endpoint: '/api/ai/analyze-application',
+          sampleBody: {
+            applicationData: {
+              applicantName: 'Test User',
+              applicantEmail: 'test@example.com',
+              applicationType: 'standard'
+            }
+          }
+        },
+        {
+          endpoint: '/api/ai/validate-completeness',
+          sampleBody: {
+            caseData: {
+              id: 'test-case-123',
+              status: 'active',
+              applicationData: { applicantName: 'Test User' }
+            }
+          }
+        },
+        {
+          endpoint: '/api/ai/detect-missing-fields',
+          sampleBody: {
+            applicationData: {
+              applicantName: 'Test User'
+            }
+          }
+        },
+        {
+          endpoint: '/api/ai/step-recommendations',
+          sampleBody: {
+            caseData: { id: 'test-case-123' },
+            step: 'in_review'
+          }
+        },
+        {
+          endpoint: '/api/ai/generate-final-summary',
+          sampleBody: {
+            caseData: {
+              id: 'test-case-123',
+              applicationData: { applicantName: 'Test User' }
+            }
+          }
         }
       ];
 
@@ -207,7 +251,12 @@ describe('API Documentation Accuracy Tests', () => {
         '/api/cases/test-123/status',
         '/api/cases/test-123/notes',
         '/api/models/current',
-        '/api/evaluation/run'
+        '/api/evaluation/run',
+        '/api/ai/analyze-application',
+        '/api/ai/validate-completeness',
+        '/api/ai/detect-missing-fields',
+        '/api/ai/step-recommendations',
+        '/api/ai/generate-final-summary'
       ];
 
       for (const endpoint of authRequiredEndpoints) {

@@ -6,6 +6,10 @@ import { setupDatabaseHooks } from './setup.js';
 describe('API Tests - Case Management Endpoints', () => {
   setupDatabaseHooks();
 
+  // ============================================================================
+  // CORE ENDPOINTS (Task 5.3)
+  // ============================================================================
+
   describe('POST /api/cases', () => {
     it('should return 404 for unimplemented endpoint', async () => {
       const newCase = {
@@ -107,6 +111,10 @@ describe('API Tests - Case Management Endpoints', () => {
       expect(response.headers).toHaveProperty('x-content-type-options', 'nosniff');
     });
   });
+
+  // ============================================================================
+  // ADVANCED ENDPOINTS (Task 5.6)
+  // ============================================================================
 
   describe('PUT /api/cases/:id/status', () => {
     it('should return 404 for unimplemented endpoint', async () => {
@@ -217,12 +225,60 @@ describe('API Tests - Case Management Endpoints', () => {
       });
     });
 
-    it('should handle query parameters', async () => {
+    it('should handle query parameters for pagination and filtering', async () => {
       const response = await request(app)
-        .get('/api/cases?status=active&page=1&limit=10')
+        .get('/api/cases?status=active&page=1&limit=10&sort=created_at&order=desc')
         .expect(404);
 
       expect(response.body).toHaveProperty('error');
+    });
+
+    it('should handle search and filtering parameters', async () => {
+      const response = await request(app)
+        .get('/api/cases?search=john&applicationType=standard&dateFrom=2024-01-01&dateTo=2024-12-31')
+        .expect(404);
+
+      expect(response.body).toHaveProperty('error');
+    });
+  });
+
+  describe('POST /api/cases/:id/documents', () => {
+    it('should return 404 for unimplemented endpoint', async () => {
+      const testCaseId = 'test-case-123';
+
+      const response = await request(app)
+        .post(`/api/cases/${testCaseId}/documents`)
+        .send({})
+        .expect(404);
+
+      expect(response.body).toMatchObject({
+        error: 'API endpoints not yet implemented',
+        message: 'This endpoint will be available in future releases'
+      });
+    });
+
+    it('should handle file upload parameters', async () => {
+      const testCaseId = 'test-case-123';
+
+      const response = await request(app)
+        .post(`/api/cases/${testCaseId}/documents`)
+        .field('documentType', 'application')
+        .field('description', 'Test document')
+        .expect(404);
+
+      expect(response.body).toHaveProperty('error');
+    });
+
+    it('should have correct response headers for file upload', async () => {
+      const testCaseId = 'test-case-123';
+
+      const response = await request(app)
+        .post(`/api/cases/${testCaseId}/documents`)
+        .send({})
+        .expect(404);
+
+      expect(response.headers['content-type']).toMatch(/application\/json/);
+      expect(response.headers).toHaveProperty('x-content-type-options', 'nosniff');
     });
   });
 

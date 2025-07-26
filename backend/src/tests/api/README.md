@@ -79,19 +79,34 @@ Tests for system health and version endpoints:
 **Requirements Covered**: 7.3, 7.7
 
 ### 2. Case Management Endpoints (`cases.api.test.ts`)
-Tests for case management API endpoints:
+Tests for case management API endpoints (covers both core and advanced functionality):
+
+**Core Endpoints (Task 5.3):**
 - `POST /api/cases` - Create new case
 - `GET /api/cases/:id` - Get case details
+
+**Advanced Endpoints (Task 5.6):**
 - `PUT /api/cases/:id/status` - Update case status
 - `POST /api/cases/:id/notes` - Add case note
 - `GET /api/cases/:id/ai-summary` - Get AI summary
 - `POST /api/cases/:id/ai-refresh` - Regenerate AI insights
 - `GET /api/cases/:id/audit` - Get audit trail
-- `GET /api/cases` - List cases with pagination
+- `GET /api/cases` - List cases with pagination and filtering
+- `POST /api/cases/:id/documents` - Upload case documents
 
-**Requirements Covered**: 1.1, 1.2, 1.6, 2.3, 2.4, 4.3
+**Requirements Covered**: 1.1, 1.2 (core), 1.6, 2.3, 2.4, 4.3, 4.6 (advanced)
 
-### 3. Model Management Endpoints (`models.api.test.ts`)
+### 3. AI Service Endpoints (`ai.api.test.ts`)
+Tests for AI service API endpoints:
+- `POST /api/ai/analyze-application` - Analyze application data with AI
+- `POST /api/ai/validate-completeness` - Validate case completeness
+- `POST /api/ai/detect-missing-fields` - Detect missing application fields
+- `POST /api/ai/step-recommendations` - Get step-specific AI recommendations
+- `POST /api/ai/generate-final-summary` - Generate final case summary
+
+**Requirements Covered**: 1.3, 1.4, 1.5, 2.1, 2.2, 2.5, 3.1, 3.2, 3.3, 4.2, 5.4
+
+### 4. Model Management Endpoints (`models.api.test.ts`)
 Tests for AI model management endpoints:
 - `GET /api/models` - Get available models
 - `GET /api/models/current` - Get current model configuration
@@ -103,7 +118,7 @@ Tests for AI model management endpoints:
 
 **Requirements Covered**: 5.1, 5.2, 5.5, 5.6, 5.9
 
-### 4. Evaluation Endpoints (`evaluation.api.test.ts`)
+### 5. Evaluation Endpoints (`evaluation.api.test.ts`)
 Tests for AI evaluation and benchmarking endpoints:
 - `POST /api/evaluation/datasets` - Create evaluation dataset
 - `POST /api/evaluation/datasets/:id/examples` - Add evaluation example
@@ -118,7 +133,7 @@ Tests for AI evaluation and benchmarking endpoints:
 
 **Requirements Covered**: 6.1, 6.2, 6.3, 6.4, 6.5, 6.6, 6.7, 6.8, 6.9, 6.10
 
-### 5. Authentication Endpoints (`auth.api.test.ts`)
+### 6. Authentication Endpoints (`auth.api.test.ts`)
 Tests for user authentication and authorization endpoints:
 - `POST /api/auth/login` - User authentication
 - `POST /api/auth/logout` - User logout
@@ -128,14 +143,14 @@ Tests for user authentication and authorization endpoints:
 
 **Requirements Covered**: 7.1
 
-### 6. Documentation Endpoints (`docs.api.test.ts`)
+### 7. Documentation Endpoints (`docs.api.test.ts`)
 Tests for API documentation and system status endpoints:
 - `GET /api/docs` - API documentation
 - `GET /api/status` - System status and metrics
 
 **Requirements Covered**: 7.9, 7.10
 
-### 7. Documentation Accuracy Tests (`documentation.test.ts`)
+### 8. Documentation Accuracy Tests (`documentation.test.ts`)
 Comprehensive tests to ensure API documentation accuracy:
 - Endpoint documentation coverage
 - HTTP method documentation
