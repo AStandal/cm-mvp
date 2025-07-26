@@ -19,6 +19,46 @@ export class CaseService {
   }
 
   /**
+   * Create a new case from application data without AI processing (for testing)
+   * Requirements: 1.1, 1.2
+   */
+  async createCaseWithoutAI(applicationData: ApplicationData, userId: string = 'system'): Promise<Case> {
+    try {
+      // Validate application data
+      this.validateApplicationData(applicationData);
+
+      const caseId = randomUUID();
+      const now = new Date();
+
+      const newCase: Case = {
+        id: caseId,
+        applicationData,
+        status: CaseStatus.ACTIVE,
+        currentStep: ProcessStep.RECEIVED,
+        createdAt: now,
+        updatedAt: now,
+        notes: [],
+        aiSummaries: [],
+        auditTrail: []
+      };
+
+      // Save the case to database
+      await this.dataService.saveCase(newCase);
+
+      // Log case creation activity
+      await this.logActivity(caseId, 'case_created', {
+        applicantName: applicationData.applicantName,
+        applicationType: applicationData.applicationType,
+        submissionDate: applicationData.submissionDate
+      }, userId);
+
+      return newCase;
+    } catch (error) {
+      throw new Error(`Failed to create case: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  /**
    * Create a new case from application data
    * Requirements: 1.1, 1.2
    */

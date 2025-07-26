@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import request from 'supertest';
-import app from '@/index.js';
+// Import setup first to ensure mocks are applied before importing the app
 import { setupDatabaseHooks } from './setup.js';
+import app from '@/index.js';
 
 describe('API Tests - Case Management Endpoints', () => {
   setupDatabaseHooks();
@@ -11,7 +12,7 @@ describe('API Tests - Case Management Endpoints', () => {
   // ============================================================================
 
   describe('POST /api/cases', () => {
-    it('should return 404 for unimplemented endpoint', async () => {
+    it('should create a new case with valid application data', async () => {
       const newCase = {
         applicationData: {
           applicantName: 'John Doe',
@@ -26,11 +27,63 @@ describe('API Tests - Case Management Endpoints', () => {
       const response = await request(app)
         .post('/api/cases')
         .send(newCase)
-        .expect(404);
+        .expect(201);
 
       expect(response.body).toMatchObject({
-        error: 'API endpoints not yet implemented',
-        message: 'This endpoint will be available in future releases'
+        success: true,
+        data: {
+          case: {
+            id: expect.any(String),
+            applicationData: {
+              applicantName: 'John Doe',
+              applicantEmail: 'john@example.com',
+              applicationType: 'standard'
+            },
+            status: 'active',
+            currentStep: 'received'
+          }
+        },
+        message: 'Case created successfully'
+      });
+
+      expect(response.body.data.case.createdAt).toBeDefined();
+      expect(response.body.data.case.updatedAt).toBeDefined();
+    });
+
+    it('should validate required fields', async () => {
+      const invalidCase = {
+        applicationData: {
+          applicantName: '',
+          applicantEmail: 'invalid-email',
+          applicationType: ''
+        }
+      };
+
+      const response = await request(app)
+        .post('/api/cases')
+        .send(invalidCase)
+        .expect(400);
+
+      expect(response.body).toMatchObject({
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'Invalid input data',
+          details: expect.any(Array)
+        }
+      });
+    });
+
+    it('should handle missing application data', async () => {
+      const response = await request(app)
+        .post('/api/cases')
+        .send({})
+        .expect(400);
+
+      expect(response.body).toMatchObject({
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'Invalid input data'
+        }
       });
     });
 
@@ -38,7 +91,7 @@ describe('API Tests - Case Management Endpoints', () => {
       const response = await request(app)
         .post('/api/cases')
         .send({})
-        .expect(404);
+        .expect(400); // Now expects validation error instead of 404
 
       expect(response.headers['content-type']).toMatch(/application\/json/);
       expect(response.headers).toHaveProperty('x-content-type-options', 'nosniff');
@@ -49,7 +102,7 @@ describe('API Tests - Case Management Endpoints', () => {
         .post('/api/cases')
         .set('Origin', 'http://localhost:3000')
         .send({})
-        .expect(404);
+        .expect(400); // Now expects validation error instead of 404
 
       expect(response.headers).toHaveProperty('access-control-allow-origin');
     });
@@ -60,7 +113,7 @@ describe('API Tests - Case Management Endpoints', () => {
       const response = await request(app)
         .post('/api/cases')
         .send(testData)
-        .expect(404);
+        .expect(400); // Now expects validation error instead of 404
 
       // Should still return JSON response indicating JSON was parsed
       expect(response.headers['content-type']).toMatch(/application\/json/);
@@ -79,17 +132,69 @@ describe('API Tests - Case Management Endpoints', () => {
   });
 
   describe('GET /api/cases/:id', () => {
-    it('should return 404 for unimplemented endpoint', async () => {
-      const testCaseId = 'test-case-123';
+    it('should retrieve an existing case by ID', async () => {
+      // First create a case
+      const newCase = {
+        applicationData: {
+          applicantName: 'Jane Smith',
+          applicantEmail: 'jane@example.com',
+          applicationType: 'priority',
+          submissionDate: new Date().toISOString(),
+          documents: [],
+          formData: { priority: 'high' }
+        }
+      };
+
+      const createResponse = await request(app)
+        .post('/api/cases')
+        .send(newCase)
+        .expect(201);
+
+      const caseId = createResponse.body.data.case.id;
+
+      // Then retrieve it
+      const response = await request(app)
+        .get(`/api/cases/${caseId}`)
+        .expect(200);
+
+      expect(response.body).toMatchObject({
+        success: true,
+        data: {
+          case: {
+            id: caseId,
+            applicationData: {
+              applicantName: 'Jane Smith',
+              applicantEmail: 'jane@example.com',
+              applicationType: 'priority'
+            },
+            status: 'active',
+            currentStep: 'received'
+          }
+        }
+      });
+    });
+
+    it('should return 404 for non-existent case', async () => {
+      const nonExistentId = 'non-existent-case-123';
 
       const response = await request(app)
-        .get(`/api/cases/${testCaseId}`)
+        .get(`/api/cases/${nonExistentId}`)
         .expect(404);
 
       expect(response.body).toMatchObject({
-        error: 'API endpoints not yet implemented',
-        message: 'This endpoint will be available in future releases'
+        error: {
+          code: 'CASE_NOT_FOUND',
+          message: `Case with ID ${nonExistentId} not found`
+        }
       });
+    });
+
+    it('should validate case ID parameter', async () => {
+      const response = await request(app)
+        .get('/api/cases/')
+        .expect(404); // Should hit the general 404 handler
+
+      expect(response.body).toHaveProperty('error');
     });
 
     it('should handle URL parameters correctly', async () => {
@@ -97,15 +202,20 @@ describe('API Tests - Case Management Endpoints', () => {
 
       const response = await request(app)
         .get(`/api/cases/${testCaseId}`)
-        .expect(404);
+        .expect(404); // This should still be 404 for non-existent case
 
-      expect(response.body).toHaveProperty('error');
+      expect(response.body).toMatchObject({
+        error: {
+          code: 'CASE_NOT_FOUND',
+          message: `Case with ID ${testCaseId} not found`
+        }
+      });
     });
 
     it('should have correct response headers', async () => {
       const response = await request(app)
         .get('/api/cases/test-123')
-        .expect(404);
+        .expect(404); // This should still be 404 for non-existent case
 
       expect(response.headers['content-type']).toMatch(/application\/json/);
       expect(response.headers).toHaveProperty('x-content-type-options', 'nosniff');
@@ -295,7 +405,7 @@ describe('API Tests - Case Management Endpoints', () => {
       const response = await request(app)
         .post('/api/cases')
         .send(largeData)
-        .expect(404);
+        .expect(400); // Now expects validation error instead of 404
 
       expect(response.headers['content-type']).toMatch(/application\/json/);
     });
@@ -304,13 +414,17 @@ describe('API Tests - Case Management Endpoints', () => {
       const requests = Array.from({ length: 5 }, (_, i) =>
         request(app)
           .get(`/api/cases/test-${i}`)
-          .expect(404)
+          .expect(404) // This should still be 404 for non-existent cases
       );
 
       const responses = await Promise.all(requests);
       
       responses.forEach(response => {
-        expect(response.body).toHaveProperty('error');
+        expect(response.body).toMatchObject({
+          error: {
+            code: 'CASE_NOT_FOUND'
+          }
+        });
       });
     });
   });
@@ -321,7 +435,7 @@ describe('API Tests - Case Management Endpoints', () => {
       
       await request(app)
         .get('/api/cases/test-123')
-        .expect(404);
+        .expect(404); // This should still be 404 for non-existent case
       
       const responseTime = Date.now() - startTime;
       expect(responseTime).toBeLessThan(5000); // Should respond within 5 seconds
@@ -333,7 +447,7 @@ describe('API Tests - Case Management Endpoints', () => {
       await request(app)
         .post('/api/cases')
         .send({ test: 'data' })
-        .expect(404);
+        .expect(400); // Now expects validation error instead of 404
       
       const responseTime = Date.now() - startTime;
       expect(responseTime).toBeLessThan(5000); // Should respond within 5 seconds

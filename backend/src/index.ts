@@ -71,7 +71,13 @@ app.get('/version', (_req: Request, res: Response) => {
   });
 });
 
-// API routes placeholder - will be implemented in future tasks
+// Import routes
+import casesRouter from './routes/cases.js';
+
+// API routes
+app.use('/api/cases', casesRouter);
+
+// Fallback for unimplemented API routes
 app.use('/api', (_req: Request, res: Response) => {
   res.status(404).json({ 
     error: 'API endpoints not yet implemented',

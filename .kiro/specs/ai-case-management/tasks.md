@@ -75,7 +75,7 @@
   - Write API documentation tests to ensure endpoint documentation accuracy
   - _Requirements: 7.3, 7.7_
 
-- [ ] 5.3 Implement core case management API endpoints
+- [x] 5.3 Implement core case management API endpoints
   - Code POST /api/cases endpoint for creating new cases with application data
   - Implement GET /api/cases/:id endpoint for retrieving case details
   - Add basic input validation, sanitization, and standardized HTTP status codes

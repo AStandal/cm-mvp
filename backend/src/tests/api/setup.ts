@@ -1,8 +1,144 @@
-import { beforeAll, afterAll, beforeEach } from 'vitest';
+import { beforeAll, afterAll, beforeEach, vi } from 'vitest';
 import Database from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';
 import { initializeDatabase } from '@/database/init.js';
+
+// Global comprehensive mock for all API tests to prevent conflicts between test suites
+vi.mock('../../routes/serviceFactory.js', () => {
+  const mockCase = {
+    id: 'test-case-123',
+    applicationData: {
+      applicantName: 'John Doe',
+      applicantEmail: 'john@example.com',
+      applicationType: 'standard',
+      submissionDate: new Date(),
+      documents: [],
+      formData: {}
+    },
+    status: 'active',
+    currentStep: 'received',
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    notes: [],
+    aiSummaries: [],
+    auditTrail: []
+  };
+
+  const existingCase = {
+    id: 'test-case-123',
+    applicationData: {
+      applicantName: 'Jane Smith',
+      applicantEmail: 'jane@example.com',
+      applicationType: 'priority',
+      submissionDate: new Date(),
+      documents: [],
+      formData: { priority: 'high' }
+    },
+    status: 'active',
+    currentStep: 'received',
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    notes: [],
+    aiSummaries: [],
+    auditTrail: []
+  };
+
+  // Comprehensive mock that satisfies all test scenarios
+  const mockCaseService = {
+    // Main async methods - used by cases.api.test.ts
+    createCaseWithoutAI: vi.fn().mockResolvedValue(mockCase),
+    createCase: vi.fn().mockResolvedValue(mockCase),
+    processApplication: vi.fn().mockResolvedValue({
+      case: mockCase,
+      applicationAnalysis: { priorityLevel: 'medium', recommendedAction: 'review' },
+      missingFieldsAnalysis: { missingFields: [], completenessScore: 0.9 }
+    }),
+    updateCaseStatus: vi.fn().mockResolvedValue(mockCase),
+    addCaseNote: vi.fn().mockResolvedValue(mockCase),
+    getCaseById: vi.fn().mockImplementation((id: string) => {
+      if (id === 'test-case-123' || id === 'existing-case-id') {
+        return Promise.resolve(existingCase);
+      }
+      return Promise.resolve(null);
+    }),
+    getCasesByStatus: vi.fn().mockResolvedValue([]),
+    
+    // Additional methods that might be called by other services
+    updateCase: vi.fn().mockResolvedValue(existingCase),
+    deleteCase: vi.fn().mockResolvedValue(true),
+    getAllCases: vi.fn().mockResolvedValue([]),
+    searchCases: vi.fn().mockResolvedValue([]),
+    processCaseWithAI: vi.fn().mockResolvedValue(mockCase),
+    addNote: vi.fn().mockResolvedValue(undefined),
+    updateStatus: vi.fn().mockResolvedValue(existingCase),
+    generateAISummary: vi.fn().mockResolvedValue('AI Summary'),
+    regenerateAISummary: vi.fn().mockResolvedValue('Updated AI Summary'),
+    getCaseHistory: vi.fn().mockResolvedValue([]),
+    getAuditTrail: vi.fn().mockResolvedValue([]),
+    validateCaseData: vi.fn().mockResolvedValue({ valid: true, errors: [] }),
+    exportCase: vi.fn().mockResolvedValue({}),
+    duplicateCase: vi.fn().mockResolvedValue(mockCase),
+    archiveCase: vi.fn().mockResolvedValue(true),
+    restoreCase: vi.fn().mockResolvedValue(true),
+    bulkUpdateCases: vi.fn().mockResolvedValue([]),
+    
+    // Private/utility methods that might be called
+    validateApplicationData: vi.fn(),
+    extractApplicationData: vi.fn().mockReturnValue({}),
+    validateStatusTransition: vi.fn(),
+    determineProcessStep: vi.fn().mockReturnValue('received'),
+    shouldRegenerateAISummary: vi.fn().mockReturnValue(false),
+    normalizeFormData: vi.fn().mockReturnValue({}),
+    generateMissingFieldsNote: vi.fn().mockReturnValue(''),
+    isValidEmail: vi.fn().mockReturnValue(true),
+    logActivity: vi.fn().mockResolvedValue(undefined)
+  };
+
+  const mockDataService = {
+    saveCase: vi.fn().mockResolvedValue(undefined),
+    getCaseById: vi.fn().mockImplementation((id: string) => {
+      if (id === 'test-case-123' || id === 'existing-case-id') {
+        return Promise.resolve(existingCase);
+      }
+      return Promise.resolve(null);
+    }),
+    updateCase: vi.fn().mockResolvedValue(undefined),
+    deleteCase: vi.fn().mockResolvedValue(undefined),
+    getAllCases: vi.fn().mockResolvedValue([]),
+    getCasesByStatus: vi.fn().mockResolvedValue([]),
+    searchCases: vi.fn().mockResolvedValue([]),
+    saveActivityLog: vi.fn().mockResolvedValue(undefined),
+    getActivityLog: vi.fn().mockResolvedValue([])
+  };
+
+  const mockAIService = {
+    generateOverallSummary: vi.fn().mockResolvedValue({}),
+    generateStepRecommendation: vi.fn().mockResolvedValue({}),
+    analyzeApplication: vi.fn().mockResolvedValue({}),
+    generateFinalSummary: vi.fn().mockResolvedValue({}),
+    validateCaseCompleteness: vi.fn().mockResolvedValue({}),
+    detectMissingFields: vi.fn().mockResolvedValue({}),
+    generateSummary: vi.fn().mockResolvedValue('Mock summary'),
+    validateCompleteness: vi.fn().mockResolvedValue({ complete: true, missing: [] }),
+    recommendNextSteps: vi.fn().mockResolvedValue([])
+  };
+
+  return {
+    createServices: vi.fn().mockReturnValue({
+      caseService: mockCaseService,
+      dataService: mockDataService,
+      aiService: mockAIService
+    }),
+    getServices: vi.fn().mockReturnValue({
+      caseService: mockCaseService,
+      dataService: mockDataService,
+      aiService: mockAIService
+    }),
+    setServices: vi.fn(),
+    resetServices: vi.fn()
+  };
+});
 
 // Test database configuration
 const TEST_DB_PATH = path.join(process.cwd(), 'test_data', 'test.db');

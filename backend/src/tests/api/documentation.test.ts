@@ -35,10 +35,22 @@ describe('API Documentation Accuracy Tests', () => {
             
             if (response.status === 404) {
               // Should have consistent error message for unimplemented endpoints
-              expect(response.body).toMatchObject({
-                error: expect.any(String),
-                message: expect.any(String)
-              });
+              // Handle both simple and structured error responses
+              if (response.body.error && typeof response.body.error === 'object') {
+                // Structured error response (like from case management endpoints)
+                expect(response.body).toMatchObject({
+                  error: {
+                    code: expect.any(String),
+                    message: expect.any(String)
+                  }
+                });
+              } else {
+                // Simple error response (like from unimplemented endpoints)
+                expect(response.body).toMatchObject({
+                  error: expect.any(String),
+                  message: expect.any(String)
+                });
+              }
             }
           }
         }
@@ -100,9 +112,18 @@ describe('API Documentation Accuracy Tests', () => {
             continue; // Skip unsupported methods
           }
           
-          // Should return 404 for unimplemented endpoints, not 405 (Method Not Allowed)
-          expect(response.status).toBe(404);
-          expect(response.body).toHaveProperty('error');
+          // Should return either success (200/201), client error (400), or 404 for unimplemented endpoints
+          // Should not return 405 (Method Not Allowed) for documented endpoints
+          expect([200, 201, 400, 404]).toContain(response.status);
+          expect(response.status).not.toBe(405);
+          
+          // Check response structure based on status
+          if (response.status >= 400) {
+            expect(response.body).toHaveProperty('error');
+          } else {
+            // Success responses should have data
+            expect(response.body).toHaveProperty('data');
+          }
         }
       }
     });
@@ -212,12 +233,23 @@ describe('API Documentation Accuracy Tests', () => {
       for (const { endpoint, sampleBody } of postEndpoints) {
         const response = await request(app)
           .post(endpoint)
-          .send(sampleBody)
-          .expect(404);
+          .send(sampleBody);
+
+        // Should return either success (200/201), client error (400), or 404 for unimplemented endpoints
+        expect([200, 201, 400, 404]).toContain(response.status);
 
         // Should parse JSON body correctly (indicated by JSON response)
         expect(response.headers['content-type']).toMatch(/application\/json/);
-        expect(response.body).toHaveProperty('error');
+        
+        // All responses should have structured data
+        if (response.status === 404) {
+          expect(response.body).toHaveProperty('error');
+        } else if (response.status >= 400) {
+          expect(response.body).toHaveProperty('error');
+        } else {
+          // Success responses should have data
+          expect(response.body).toHaveProperty('data');
+        }
       }
     });
 
@@ -356,8 +388,10 @@ describe('API Documentation Accuracy Tests', () => {
         const response = await request(app)
           .post('/api/cases')
           .set('Content-Type', contentType)
-          .send(contentType === 'application/json' ? '{"test": "data"}' : 'test=data')
-          .expect(404);
+          .send(contentType === 'application/json' ? '{"test": "data"}' : 'test=data');
+
+        // Should return either client error (400) for invalid data or 404 for unimplemented endpoints
+        expect([400, 404]).toContain(response.status);
 
         // Should handle different content types
         expect(response.body).toHaveProperty('error');
