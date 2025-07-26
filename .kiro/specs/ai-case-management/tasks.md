@@ -61,26 +61,39 @@
   - _Requirements: 1.1, 1.2, 1.5, 2.6_
 
 - [ ] 5. Create basic Express.js API server
-- [ ] 5.1 Set up Express server with basic middleware
+- [x] 5.1 Set up Express server with basic middleware
   - Create Express application with TypeScript and basic middleware (CORS, JSON parsing)
   - Implement basic health check and version endpoints
   - Set up basic error handling middleware
   - Write unit tests for Express server setup and basic middleware functionality
   - _Requirements: 7.3, 7.7_
 
-- [ ] 5.2 Implement core case management API endpoints
+- [ ] 5.2 Implement basic API testing framework
+  - Create dedicated API test suite with supertest for all endpoints
+  - Implement test database setup and teardown for isolated API testing
+  - Integrate API tests into npm run verify workflow with proper test isolation
+  - Write API documentation tests to ensure endpoint documentation accuracy
+  - _Requirements: 7.3, 7.7_
+
+- [ ] 5.3 Implement core case management API endpoints
   - Code POST /api/cases, GET /api/cases/:id, PUT /api/cases/:id/status endpoints
   - Implement POST /api/cases/:id/notes and GET /api/cases/:id/audit endpoints
   - Add basic input validation and HTTP status codes
   - Write integration tests for case management API endpoints with test database
   - _Requirements: 1.1, 1.2, 1.6, 2.3, 2.4, 4.3_
 
-- [ ] 5.3 Implement basic AI-related API endpoints
+- [ ] 5.4 Implement basic AI-related API endpoints
   - Code GET /api/cases/:id/ai-summary and POST /api/cases/:id/ai-refresh endpoints
   - Implement AI summary retrieval and regeneration with basic error handling
   - Add basic timeout handling for AI operations
   - Write integration tests for AI endpoints with mocked AI service responses
   - _Requirements: 1.3, 1.4, 2.1, 2.2, 2.5, 3.1, 3.2, 4.2_
+
+- [ ] 5.5 Implement advanced API testing features
+  - Add API contract testing to validate request/response schemas
+  - Create test utilities for authentication, mocking, and data seeding
+  - Add performance benchmarks for critical API endpoints
+  - _Requirements: 7.12_
 
 - [ ] 6. Implement comprehensive error handling and logging
 - [ ] 6.1 Create standardized error handling system
