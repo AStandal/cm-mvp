@@ -8,7 +8,9 @@ import {
   ApplicationData,
   CaseStatus,
   ProcessStep,
-  AISummary
+  AISummary,
+  ApplicationAnalysis,
+  MissingFieldsAnalysis
 } from '../types/index.js';
 import { randomUUID } from 'crypto';
 import path from 'path';
@@ -489,6 +491,217 @@ describe('CaseService', () => {
     });
   });
 
+  describe('processApplication', () => {
+    it('should process application with comprehensive AI analysis', async () => {
+      const applicationData = createTestApplicationData();
+      const mockApplicationAnalysis = createTestApplicationAnalysis();
+      const mockMissingFieldsAnalysis = createTestMissingFieldsAnalysis();
+      const mockAISummary = createTestAISummary('test-case-id');
+
+      (aiService.detectMissingFields as any).mockResolvedValue(mockMissingFieldsAnalysis);
+      (aiService.analyzeApplication as any).mockResolvedValue(mockApplicationAnalysis);
+      (aiService.generateOverallSummary as any).mockResolvedValue(mockAISummary);
+
+      const result = await caseService.processApplication(applicationData, 'user123');
+
+      expect(result).toBeDefined();
+      expect(result.case).toBeDefined();
+      expect(result.applicationAnalysis).toEqual(mockApplicationAnalysis);
+      expect(result.missingFieldsAnalysis).toEqual(mockMissingFieldsAnalysis);
+      expect(result.case.status).toBe(CaseStatus.ACTIVE);
+      expect(result.case.currentStep).toBe(ProcessStep.RECEIVED);
+
+      // Verify AI services were called
+      expect(aiService.detectMissingFields).toHaveBeenCalledWith(expect.objectContaining({
+        applicantName: applicationData.applicantName,
+        applicantEmail: applicationData.applicantEmail.toLowerCase(),
+        applicationType: applicationData.applicationType
+      }));
+      expect(aiService.analyzeApplication).toHaveBeenCalledWith(expect.objectContaining({
+        applicantName: applicationData.applicantName,
+        applicantEmail: applicationData.applicantEmail.toLowerCase(),
+        applicationType: applicationData.applicationType
+      }));
+      expect(aiService.generateOverallSummary).toHaveBeenCalledWith(expect.objectContaining({
+        id: result.case.id,
+        status: CaseStatus.ACTIVE,
+        currentStep: ProcessStep.RECEIVED
+      }));
+    });
+
+    it('should normalize application data during extraction', async () => {
+      const rawApplicationData = createTestApplicationData();
+      rawApplicationData.applicantName = '  John Doe  '; // Extra spaces
+      rawApplicationData.applicantEmail = '  JOHN.DOE@EXAMPLE.COM  '; // Uppercase and spaces
+      rawApplicationData.formData = {
+        field1: '  value1  ',
+        field2: '',
+        field3: null,
+        field4: undefined,
+        field5: 0,
+        field6: false,
+        field7: []
+      };
+
+      const mockApplicationAnalysis = createTestApplicationAnalysis();
+      const mockMissingFieldsAnalysis = createTestMissingFieldsAnalysis();
+      const mockAISummary = createTestAISummary('test-case-id');
+
+      (aiService.detectMissingFields as any).mockResolvedValue(mockMissingFieldsAnalysis);
+      (aiService.analyzeApplication as any).mockResolvedValue(mockApplicationAnalysis);
+      (aiService.generateOverallSummary as any).mockResolvedValue(mockAISummary);
+
+      const result = await caseService.processApplication(rawApplicationData, 'user123');
+
+      expect(result.case.applicationData.applicantName).toBe('John Doe');
+      expect(result.case.applicationData.applicantEmail).toBe('john.doe@example.com');
+      expect(result.case.applicationData.formData).toEqual({
+        field1: 'value1',
+        field5: 0,
+        field6: false
+      });
+    });
+
+    it('should set case to PENDING status for low completeness score', async () => {
+      const applicationData = createTestApplicationData();
+      const mockApplicationAnalysis = createTestApplicationAnalysis();
+      const mockMissingFieldsAnalysis = createTestMissingFieldsAnalysis();
+      mockMissingFieldsAnalysis.completenessScore = 0.6; // Below 0.7 threshold
+      const mockAISummary = createTestAISummary('test-case-id');
+
+      (aiService.detectMissingFields as any).mockResolvedValue(mockMissingFieldsAnalysis);
+      (aiService.analyzeApplication as any).mockResolvedValue(mockApplicationAnalysis);
+      (aiService.generateOverallSummary as any).mockResolvedValue(mockAISummary);
+
+      const result = await caseService.processApplication(applicationData, 'user123');
+
+      expect(result.case.status).toBe(CaseStatus.PENDING);
+      expect(result.case.currentStep).toBe(ProcessStep.ADDITIONAL_INFO_REQUIRED);
+    });
+
+    it('should add missing fields note when fields are missing', async () => {
+      const applicationData = createTestApplicationData();
+      const mockApplicationAnalysis = createTestApplicationAnalysis();
+      const mockMissingFieldsAnalysis = createTestMissingFieldsAnalysis();
+      mockMissingFieldsAnalysis.missingFields = [
+        {
+          fieldName: 'phoneNumber',
+          fieldType: 'string',
+          importance: 'required',
+          suggestedAction: 'Contact applicant for phone number'
+        },
+        {
+          fieldName: 'address',
+          fieldType: 'string',
+          importance: 'recommended',
+          suggestedAction: 'Request current address'
+        }
+      ];
+      const mockAISummary = createTestAISummary('test-case-id');
+
+      (aiService.detectMissingFields as any).mockResolvedValue(mockMissingFieldsAnalysis);
+      (aiService.analyzeApplication as any).mockResolvedValue(mockApplicationAnalysis);
+      (aiService.generateOverallSummary as any).mockResolvedValue(mockAISummary);
+
+      const result = await caseService.processApplication(applicationData, 'user123');
+
+      expect(result.case.notes).toHaveLength(1);
+      expect(result.case.notes[0].content).toContain('Missing Fields Analysis');
+      expect(result.case.notes[0].content).toContain('phoneNumber');
+      expect(result.case.notes[0].content).toContain('address');
+      expect(result.case.notes[0].content).toContain('Required Fields Missing');
+      expect(result.case.notes[0].content).toContain('Recommended Fields Missing');
+    });
+
+    it('should not add missing fields note when no fields are missing', async () => {
+      const applicationData = createTestApplicationData();
+      const mockApplicationAnalysis = createTestApplicationAnalysis();
+      const mockMissingFieldsAnalysis = createTestMissingFieldsAnalysis();
+      mockMissingFieldsAnalysis.missingFields = []; // No missing fields
+      const mockAISummary = createTestAISummary('test-case-id');
+
+      (aiService.detectMissingFields as any).mockResolvedValue(mockMissingFieldsAnalysis);
+      (aiService.analyzeApplication as any).mockResolvedValue(mockApplicationAnalysis);
+      (aiService.generateOverallSummary as any).mockResolvedValue(mockAISummary);
+
+      const result = await caseService.processApplication(applicationData, 'user123');
+
+      expect(result.case.notes).toHaveLength(0);
+    });
+
+    it('should continue processing even if AI analysis fails', async () => {
+      const applicationData = createTestApplicationData();
+      const mockMissingFieldsAnalysis = createTestMissingFieldsAnalysis();
+
+      (aiService.detectMissingFields as any).mockResolvedValue(mockMissingFieldsAnalysis);
+      (aiService.analyzeApplication as any).mockRejectedValue(new Error('AI service unavailable'));
+
+      await expect(caseService.processApplication(applicationData, 'user123')).rejects.toThrow('Failed to process application');
+    });
+
+    it('should continue case creation even if AI summary generation fails', async () => {
+      const applicationData = createTestApplicationData();
+      const mockApplicationAnalysis = createTestApplicationAnalysis();
+      const mockMissingFieldsAnalysis = createTestMissingFieldsAnalysis();
+
+      (aiService.detectMissingFields as any).mockResolvedValue(mockMissingFieldsAnalysis);
+      (aiService.analyzeApplication as any).mockResolvedValue(mockApplicationAnalysis);
+      (aiService.generateOverallSummary as any).mockRejectedValue(new Error('AI service unavailable'));
+
+      const result = await caseService.processApplication(applicationData, 'user123');
+
+      expect(result).toBeDefined();
+      expect(result.case).toBeDefined();
+      expect(result.case.aiSummaries).toHaveLength(0); // No AI summary due to failure
+    });
+
+    it('should log comprehensive audit trail during processing', async () => {
+      const applicationData = createTestApplicationData();
+      const mockApplicationAnalysis = createTestApplicationAnalysis();
+      const mockMissingFieldsAnalysis = createTestMissingFieldsAnalysis();
+      mockMissingFieldsAnalysis.missingFields = [
+        {
+          fieldName: 'phoneNumber',
+          fieldType: 'string',
+          importance: 'required',
+          suggestedAction: 'Contact applicant for phone number'
+        }
+      ];
+      const mockAISummary = createTestAISummary('test-case-id');
+
+      (aiService.detectMissingFields as any).mockResolvedValue(mockMissingFieldsAnalysis);
+      (aiService.analyzeApplication as any).mockResolvedValue(mockApplicationAnalysis);
+      (aiService.generateOverallSummary as any).mockResolvedValue(mockAISummary);
+
+      const result = await caseService.processApplication(applicationData, 'user123');
+
+      const auditTrail = await dataService.getAuditTrail(result.case.id);
+
+      // Should have multiple audit entries
+      expect(auditTrail.length).toBeGreaterThanOrEqual(4);
+
+      // Check for specific audit entries
+      const processedEntry = auditTrail.find(entry => entry.action === 'application_processed');
+      expect(processedEntry).toBeDefined();
+
+      const missingFieldsEntry = auditTrail.find(entry => entry.action === 'missing_fields_detected');
+      expect(missingFieldsEntry).toBeDefined();
+
+      // AI analysis entry might be 'ai_analysis_completed' or 'ai_analysis_failed'
+      const aiAnalysisEntry = auditTrail.find(entry => 
+        entry.action === 'ai_analysis_completed' || entry.action === 'ai_analysis_failed'
+      );
+      expect(aiAnalysisEntry).toBeDefined();
+    });
+
+    it('should validate application data during processing', async () => {
+      const invalidData = createTestApplicationData();
+      invalidData.applicantName = '';
+
+      await expect(caseService.processApplication(invalidData, 'user123')).rejects.toThrow('Applicant name is required');
+    });
+  });
+
   describe('Error Handling', () => {
     it('should provide meaningful error messages', async () => {
       // Test validation error messages - this test runs before database is closed
@@ -532,6 +745,29 @@ describe('CaseService', () => {
       confidence: 0.85,
       generatedAt: new Date(),
       version: 1
+    };
+  }
+
+  function createTestApplicationAnalysis(): import('../types/index.js').ApplicationAnalysis {
+    return {
+      summary: 'Test application analysis summary',
+      keyPoints: ['Key point 1', 'Key point 2'],
+      potentialIssues: ['Potential issue 1'],
+      recommendedActions: ['Recommended action 1', 'Recommended action 2'],
+      priorityLevel: 'medium',
+      estimatedProcessingTime: '2-3 business days',
+      requiredDocuments: ['Document 1', 'Document 2'],
+      analysisTimestamp: new Date()
+    };
+  }
+
+  function createTestMissingFieldsAnalysis(): import('../types/index.js').MissingFieldsAnalysis {
+    return {
+      missingFields: [],
+      completenessScore: 0.85,
+      priorityActions: ['Priority action 1'],
+      estimatedCompletionTime: '1-2 business days',
+      analysisTimestamp: new Date()
     };
   }
 });

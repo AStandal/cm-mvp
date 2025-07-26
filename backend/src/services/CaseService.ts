@@ -56,7 +56,7 @@ export class CaseService {
       try {
         const aiSummary = await this.aiService.generateOverallSummary(newCase);
         await this.dataService.saveSummary(aiSummary);
-        
+
         // Update case with AI summary
         newCase.aiSummaries = [aiSummary];
       } catch (aiError) {
@@ -69,6 +69,77 @@ export class CaseService {
       return newCase;
     } catch (error) {
       throw new Error(`Failed to create case: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  /**
+   * Process application data with comprehensive AI analysis and validation
+   * Requirements: 1.1, 1.2, 1.5, 2.6
+   */
+  async processApplication(applicationData: ApplicationData, userId: string = 'system'): Promise<{
+    case: Case;
+    applicationAnalysis: import('../types/index.js').ApplicationAnalysis;
+    missingFieldsAnalysis: import('../types/index.js').MissingFieldsAnalysis;
+  }> {
+    try {
+      // Step 1: Extract and validate application data
+      const extractedData = this.extractApplicationData(applicationData);
+
+      // Step 2: Detect missing fields using AI
+      const missingFieldsAnalysis = await this.aiService.detectMissingFields(extractedData);
+
+      // Step 3: Analyze application using AI
+      const applicationAnalysis = await this.aiService.analyzeApplication(extractedData);
+
+      // Step 4: Create case using the standard createCase method
+      const newCase = await this.createCase(extractedData, userId);
+
+      // Step 5: Log application processing activity
+      await this.logActivity(newCase.id, 'application_processed', {
+        applicantName: extractedData.applicantName,
+        applicationType: extractedData.applicationType,
+        submissionDate: extractedData.submissionDate,
+        completenessScore: missingFieldsAnalysis.completenessScore,
+        priorityLevel: applicationAnalysis.priorityLevel,
+        missingFieldsCount: missingFieldsAnalysis.missingFields.length
+      }, userId);
+
+      // Step 6: Add case notes for missing fields if any
+      if (missingFieldsAnalysis.missingFields.length > 0) {
+        const missingFieldsNote = this.generateMissingFieldsNote(missingFieldsAnalysis);
+        await this.addCaseNote(newCase.id, missingFieldsNote, userId);
+
+        // Log missing fields detection
+        await this.logActivity(newCase.id, 'missing_fields_detected', {
+          missingFieldsCount: missingFieldsAnalysis.missingFields.length,
+          requiredFields: missingFieldsAnalysis.missingFields.filter(f => f.importance === 'required').length,
+          recommendedFields: missingFieldsAnalysis.missingFields.filter(f => f.importance === 'recommended').length
+        }, userId);
+      }
+
+      // Step 7: Set case status based on completeness
+      if (missingFieldsAnalysis.completenessScore < 0.7) {
+        await this.updateCaseStatus(newCase.id, CaseStatus.PENDING, userId);
+        await this.logActivity(newCase.id, 'case_marked_incomplete', {
+          completenessScore: missingFieldsAnalysis.completenessScore,
+          reason: 'Low completeness score requires additional information'
+        }, userId);
+      }
+
+      // Get the final case with all updates
+      const finalCase = await this.dataService.getCase(newCase.id);
+      if (!finalCase) {
+        throw new Error('Failed to retrieve processed case');
+      }
+
+      return {
+        case: finalCase,
+        applicationAnalysis,
+        missingFieldsAnalysis
+      };
+
+    } catch (error) {
+      throw new Error(`Failed to process application: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 
@@ -166,7 +237,7 @@ export class CaseService {
       try {
         const aiSummary = await this.aiService.generateOverallSummary(updatedCase);
         await this.dataService.saveSummary(aiSummary);
-        
+
         await this.logActivity(caseId, 'ai_summary_updated', {
           trigger: 'note_added',
           summaryVersion: aiSummary.version
@@ -210,6 +281,101 @@ export class CaseService {
   }
 
   // Private helper methods
+
+  /**
+   * Extract and normalize application data
+   * Requirements: 1.1, 1.2
+   */
+  private extractApplicationData(rawApplicationData: ApplicationData): ApplicationData {
+    // Normalize and clean application data
+    const extractedData: ApplicationData = {
+      applicantName: rawApplicationData.applicantName?.trim() || '',
+      applicantEmail: rawApplicationData.applicantEmail?.trim().toLowerCase() || '',
+      applicationType: rawApplicationData.applicationType?.trim() || '',
+      submissionDate: rawApplicationData.submissionDate || new Date(),
+      documents: rawApplicationData.documents || [],
+      formData: this.normalizeFormData(rawApplicationData.formData || {})
+    };
+
+    return extractedData;
+  }
+
+  /**
+   * Normalize form data by cleaning and standardizing values
+   */
+  private normalizeFormData(formData: Record<string, any>): Record<string, any> {
+    const normalized: Record<string, any> = {};
+
+    for (const [key, value] of Object.entries(formData)) {
+      if (value !== null && value !== undefined) {
+        if (typeof value === 'string') {
+          const trimmed = value.trim();
+          if (trimmed.length > 0) {
+            normalized[key] = trimmed;
+          }
+        } else if (typeof value === 'number' && !isNaN(value)) {
+          normalized[key] = value;
+        } else if (typeof value === 'boolean') {
+          normalized[key] = value;
+        } else if (Array.isArray(value) && value.length > 0) {
+          normalized[key] = value;
+        } else if (typeof value === 'object' && Object.keys(value).length > 0) {
+          normalized[key] = value;
+        }
+      }
+    }
+
+    return normalized;
+  }
+
+  /**
+   * Generate a case note for missing fields
+   * Requirements: 1.5, 2.6
+   */
+  private generateMissingFieldsNote(missingFieldsAnalysis: import('../types/index.js').MissingFieldsAnalysis): string {
+    const requiredFields = missingFieldsAnalysis.missingFields.filter(f => f.importance === 'required');
+    const recommendedFields = missingFieldsAnalysis.missingFields.filter(f => f.importance === 'recommended');
+    const optionalFields = missingFieldsAnalysis.missingFields.filter(f => f.importance === 'optional');
+
+    let note = `**Missing Fields Analysis** (Completeness Score: ${(missingFieldsAnalysis.completenessScore * 100).toFixed(1)}%)\n\n`;
+
+    if (requiredFields.length > 0) {
+      note += `**Required Fields Missing:**\n`;
+      requiredFields.forEach(field => {
+        note += `- ${field.fieldName} (${field.fieldType}): ${field.suggestedAction}\n`;
+      });
+      note += '\n';
+    }
+
+    if (recommendedFields.length > 0) {
+      note += `**Recommended Fields Missing:**\n`;
+      recommendedFields.forEach(field => {
+        note += `- ${field.fieldName} (${field.fieldType}): ${field.suggestedAction}\n`;
+      });
+      note += '\n';
+    }
+
+    if (optionalFields.length > 0) {
+      note += `**Optional Fields Missing:**\n`;
+      optionalFields.forEach(field => {
+        note += `- ${field.fieldName} (${field.fieldType}): ${field.suggestedAction}\n`;
+      });
+      note += '\n';
+    }
+
+    if (missingFieldsAnalysis.priorityActions.length > 0) {
+      note += `**Priority Actions:**\n`;
+      missingFieldsAnalysis.priorityActions.forEach(action => {
+        note += `- ${action}\n`;
+      });
+      note += '\n';
+    }
+
+    note += `**Estimated Completion Time:** ${missingFieldsAnalysis.estimatedCompletionTime}\n`;
+    note += `**Analysis Generated:** ${missingFieldsAnalysis.analysisTimestamp.toISOString()}`;
+
+    return note;
+  }
 
   /**
    * Validate application data before case creation
@@ -262,7 +428,7 @@ export class CaseService {
     };
 
     const allowedTransitions = validTransitions[currentStatus] || [];
-    
+
     if (!allowedTransitions.includes(newStatus)) {
       throw new Error(`Invalid status transition from ${currentStatus} to ${newStatus}`);
     }
