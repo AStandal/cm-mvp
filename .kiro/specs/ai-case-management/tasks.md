@@ -133,7 +133,7 @@
   - Implement basic routing structure and layout components
   - _Requirements: 2.1_
 
-- [ ] 7.2 Create shared UI components and utilities
+- [x] 7.2 Create shared UI components and utilities
   - Implement common UI components (buttons, forms, loading indicators). Only make those relevant for NewCase and CaseDetails/CaseView
   - Set up Tailwind CSS styling and design system
   - Create API client utilities for backend communication if not already made

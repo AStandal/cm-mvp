@@ -1,4 +1,5 @@
-import axios from 'axios';
+import axios, { AxiosResponse } from 'axios';
+import { handleApiError, withRetry } from '@/utils/api';
 
 // Create axios instance with base configuration
 const api = axios.create({
@@ -36,5 +37,40 @@ api.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+
+/**
+ * Generic API request wrapper with error handling and retry logic
+ */
+export const apiRequest = async <T>(
+  requestFn: () => Promise<AxiosResponse<T>>,
+  retries: number = 1
+): Promise<T> => {
+  try {
+    const response = await withRetry(requestFn, retries);
+    return response.data;
+  } catch (error) {
+    throw handleApiError(error);
+  }
+};
+
+/**
+ * API methods with consistent error handling
+ */
+export const apiClient = {
+  get: <T>(url: string, config?: any) => 
+    apiRequest<T>(() => api.get(url, config)),
+  
+  post: <T>(url: string, data?: any, config?: any) => 
+    apiRequest<T>(() => api.post(url, data, config)),
+  
+  put: <T>(url: string, data?: any, config?: any) => 
+    apiRequest<T>(() => api.put(url, data, config)),
+  
+  delete: <T>(url: string, config?: any) => 
+    apiRequest<T>(() => api.delete(url, config)),
+  
+  patch: <T>(url: string, data?: any, config?: any) => 
+    apiRequest<T>(() => api.patch(url, data, config)),
+};
 
 export default api;
