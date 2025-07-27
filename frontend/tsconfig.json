@@ -8,7 +8,6 @@
       "DOM.Iterable"
     ],
     "module": "ESNext",
-    "skipLibCheck": true,
     "types": [
       "vitest/globals",
       "node"
@@ -25,6 +24,7 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
+    "skipLibCheck": true,
     /* Path mapping */
     "baseUrl": ".",
     "paths": {
@@ -46,7 +46,8 @@
     }
   },
   "include": [
-    "src"
+    "src",
+    "src/types/react-router.d.ts"
   ],
   "references": [
     {

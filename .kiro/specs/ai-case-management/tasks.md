@@ -127,18 +127,16 @@
   - _Requirements: 7.8_
 
 - [ ] 7. Create React frontend foundation
-- [] 7.1 Set up React application with routing and state management
+- [x] 7.1 Set up React application with routing and state management
   - Create Vite-based React 19 application with TypeScript
   - Set up React Query for API state management and caching
   - Implement basic routing structure and layout components
-  - Write unit tests for routing configuration and layout components
   - _Requirements: 2.1_
 
 - [ ] 7.2 Create shared UI components and utilities
-  - Implement common UI components (buttons, forms, loading indicators)
+  - Implement common UI components (buttons, forms, loading indicators). Only make those relevant for NewCase and CaseDetails/CaseView
   - Set up Tailwind CSS styling and design system
-  - Create API client utilities for backend communication
-  - Write unit tests for shared UI components and API client utilities
+  - Create API client utilities for backend communication if not already made
   - _Requirements: 2.1_
 
 - [ ] 8. Implement core React components
