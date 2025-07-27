@@ -20,7 +20,7 @@ const applicationDataSchema = z.object({
     mimeType: z.string(),
     uploadedAt: z.string().datetime()
   })).optional(),
-  formData: z.record(z.any()).optional()
+  formData: z.record(z.string(), z.any()).optional()
 });
 
 const createCaseSchema = z.object({
@@ -40,7 +40,7 @@ const validateInput = (schema: z.ZodSchema) => {
           error: {
             code: 'VALIDATION_ERROR',
             message: 'Invalid input data',
-            details: error.errors
+            details: (error as z.ZodError).issues
           },
           timestamp: new Date().toISOString(),
           requestId: randomUUID()

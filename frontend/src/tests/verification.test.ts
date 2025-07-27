@@ -28,7 +28,7 @@ describe('Frontend Verification Suite', () => {
         'vite.config.ts',
         'eslint.config.js',
         '.env.example',
-        'tailwind.config.js',
+'tailwind.config.cjs',
         'index.html'
       ];
 
@@ -178,7 +178,7 @@ describe('Frontend Verification Suite', () => {
   describe('CSS Configuration', () => {
     it('should have Tailwind CSS properly configured', async () => {
       const cssFile = await fs.readFile(path.join(process.cwd(), 'src/index.css'), 'utf-8');
-      const tailwindConfig = await fs.readFile(path.join(process.cwd(), 'tailwind.config.js'), 'utf-8');
+      const tailwindConfig = await fs.readFile(path.join(process.cwd(), 'tailwind.config.cjs'), 'utf-8');
 
       // Check for Tailwind directives in CSS
       expect(cssFile).toContain('@tailwind base');
