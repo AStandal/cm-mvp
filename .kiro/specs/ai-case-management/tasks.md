@@ -140,7 +140,7 @@
   - _Requirements: 2.1_
 
 - [ ] 8. Implement core React components
-- [ ] 8.1 Create basic CaseView main component
+- [x] 8.1 Create basic CaseView main component
   - Code basic CaseView component structure with main layout sections
   - Map out the different sections: case header, process steps, AI insights panel, notes section, and action buttons
   - Create placeholder components for each section to establish the overall structure
@@ -155,14 +155,19 @@
   - Write unit tests for ProcessStepIndicator component behavior and accessibility
   - _Requirements: 2.3, 2.5_
 
-- [ ] 8.3 Create AIInsightPanel component
-  - Code AIInsightPanel for displaying AI summaries and recommendations
+- [ ] 8.3 Create basic AIInsightPanel component
+  - Code basic AIInsightPanel component for displaying AI summary
+  - Implement one end-to-end flow for AI summary display with loading states
+  - Add basic API integration for fetching AI summaries
+  - _Requirements: 1.3, 1.4, 2.1, 2.2, 2.5, 3.1_
+
+- [ ] 8.4 Enhance AIInsightPanel with advanced features
   - Implement refresh/regenerate functionality with loading states
   - Add historical AI summary versions display
   - Write unit tests for AIInsightPanel component with mocked API responses
   - _Requirements: 1.3, 1.4, 2.1, 2.2, 2.5, 3.1_
 
-- [ ] 8.4 Create CaseView main component
+- [ ] 8.5 Create CaseView main component
   - Code CaseView component integrating all case management functionality
   - Implement real-time AI summary display and case status controls
   - Add note-taking functionality with AI integration
