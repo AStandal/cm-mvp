@@ -140,7 +140,7 @@
   - _Requirements: 2.1_
 
 - [ ] 8. Implement core React components
-- [ ] 8.1 Create basic CaseView main component
+- [x] 8.1 Create basic CaseView main component
   - Code basic CaseView component structure with main layout sections
   - Map out the different sections: case header, process steps, AI insights panel, notes section, and action buttons
   - Create placeholder components for each section to establish the overall structure

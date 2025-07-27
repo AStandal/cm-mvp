@@ -180,10 +180,8 @@ describe('Frontend Verification Suite', () => {
       const cssFile = await fs.readFile(path.join(process.cwd(), 'src/index.css'), 'utf-8');
       const tailwindConfig = await fs.readFile(path.join(process.cwd(), 'tailwind.config.js'), 'utf-8');
 
-      // Check for Tailwind directives in CSS
-      expect(cssFile).toContain('@tailwind base');
-      expect(cssFile).toContain('@tailwind components');
-      expect(cssFile).toContain('@tailwind utilities');
+      // Check for Tailwind directives in CSS (v4 syntax)
+      expect(cssFile).toContain('@import "tailwindcss"');
 
       // Check for proper Tailwind configuration
       expect(tailwindConfig).toContain('content:');
