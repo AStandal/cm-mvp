@@ -72,6 +72,9 @@ Thumbs.db
 *.sqlite3
 data/
 
+# Internal development files (private, not shared)
+INTERNAL_TASK_LIST.md
+
 # AI Case Management specific
 # Keep .kiro/ directory as it contains project specs
 # Keep .github/ directory for CI/CD workflows

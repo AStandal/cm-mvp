@@ -1,0 +1,218 @@
+# AI Case Management System - Development Rules
+
+## Project Context
+This is an AI-powered case management SaaS system built with React 19 + TypeScript frontend and Express.js + TypeScript backend. The system integrates OpenRouter API for multi-model AI capabilities and uses SQLite for data persistence.
+
+## Internal Task List Reference
+- Always reference `INTERNAL_TASK_LIST.md` for current development priorities and progress
+- Update the task list when new tasks are identified or priorities change
+- Follow the MVP priority order: Phase 1 (Core Functionality) → Phase 2 (Security/UX) → Phase 3 (Polish/Testing)
+- Mark completed tasks with [x] and update progress percentages
+
+## Current Development Status
+- **Backend Services**: ✅ Complete (DataService, AIService, CaseService, OpenRouterClient, PromptTemplateService)
+- **Database Layer**: ✅ Complete (SQLite schema, migrations, unit tests)
+- **Basic API Foundation**: ✅ Complete (Express server, basic endpoints, validation)
+- **AI-Specific API Endpoints**: 🔄 In Progress (Critical for MVP)
+- **Frontend Components**: 🔄 Next Priority (Critical for MVP)
+
+## Development Priorities
+1. **AI-Specific API Endpoints** (Section 5.1) - Must complete for MVP
+2. **Advanced Case Management API** (Section 6.1-6.2) - Critical for workflow
+3. **Core Frontend Components** (Section 7.1-7.2) - Essential for user interface
+4. **Authentication and Security** (Section 8) - Required for production
+5. **File Upload System** (Section 9) - Important for document management
+
+## Code Quality Standards
+- Follow TypeScript strict mode
+- Maintain 90%+ test coverage
+- Use Zod for input validation
+- Implement proper error handling with standardized responses
+- Follow RESTful API conventions
+- Use React Query for frontend state management
+- Implement proper loading states and error boundaries
+
+## AI Integration Guidelines
+- All AI operations go through OpenRouterClient
+- Use PromptTemplateService for consistent prompt management
+- Log all AI interactions for audit and optimization
+- Implement fallback strategies for AI service failures
+- Track costs and performance metrics
+
+## Testing Strategy
+- Unit tests for all services and utilities
+- Integration tests for API endpoints
+- Component tests for React components
+- End-to-end tests for complete workflows
+- Mock AI responses for consistent testing
+- Accessibility testing with automated tools (axe-core)
+- Cross-browser and device testing
+- Performance testing for critical user flows
+
+## Security Requirements
+- JWT authentication for all protected routes
+- Input validation and sanitization
+- Rate limiting for API endpoints
+- Secure file upload with validation
+- CORS configuration for frontend access
+- XSS protection and content sanitization
+- HTTPS enforcement in production
+- Secure headers implementation
+
+## When Suggesting Code Changes
+1. Check the internal task list for current priorities
+2. Ensure changes align with MVP requirements
+3. Update task list if new requirements are identified
+4. Consider impact on existing completed components
+5. Maintain backward compatibility where possible
+6. Add appropriate tests for new functionality
+
+## File Organization
+- Backend: `/backend/src/` with services, routes, database, types
+- Frontend: `/frontend/src/` with components, pages, services, types
+- Shared types: Define in respective type files
+- Configuration: Environment-based with proper defaults
+
+## API Design Principles
+- RESTful conventions
+- Consistent error response format
+- Proper HTTP status codes
+- Request/response validation
+- Comprehensive documentation
+- Versioning strategy for future changes
+
+## Frontend Architecture
+- React 19 with TypeScript
+- TanStack React Query for state management
+- Tailwind CSS for styling
+- Vite for build tooling
+- Component-based architecture with proper separation of concerns
+
+## Accessibility and User Experience Standards
+- All interactive elements must have proper ARIA labels and roles
+- Ensure minimum 24x24px target sizes for clickable elements
+- Use semantic HTML elements for proper screen reader support
+- Provide comprehensive keyboard navigation support
+- Include proper focus management and visible focus indicators
+- Implement clear loading states and progress indicators
+- Provide user-friendly error messages with actionable guidance
+- Ensure responsive design works across all device sizes
+- Test on multiple browsers and devices for consistency
+- Use consistent design patterns and visual hierarchy
+- Implement proper color contrast ratios (WCAG AA compliance)
+- Provide alternative text for images and non-text content
+
+## Database Design
+- SQLite with better-sqlite3
+- Normalized schema for efficiency
+- Proper indexing for common queries
+- Transaction support for data consistency
+- Migration system for schema evolution
+
+## Environment Configuration
+- Use environment variables for configuration
+- Separate development, test, and production settings
+- Secure handling of API keys and sensitive data
+- Proper .env file management
+
+## Documentation Requirements
+- Update INTERNAL_TASK_LIST.md with progress
+- Maintain API documentation
+- Code comments for complex logic
+- README updates for new features
+- Deployment and setup instructions
+
+## Performance Considerations
+- Optimize database queries
+- Implement caching where appropriate
+- Monitor AI API response times
+- Frontend bundle optimization
+- Lazy loading for components
+
+## Error Handling Strategy
+- Graceful degradation for AI service failures
+- User-friendly error messages
+- Proper logging for debugging
+- Fallback mechanisms for critical services
+- Retry logic for transient failures
+
+## Git Workflow Best Practices
+
+### Commit Guidelines
+- **Commit Frequency**: Commit every 2-4 hours of development or when completing a logical unit of work
+- **Commit Message Format**: `type(scope): description`
+  - Examples: `feat(api): add AI summary endpoint`, `fix(frontend): resolve loading state issue`, `test(backend): add case service tests`
+- **Commit Types**: feat, fix, test, docs, refactor, style, chore
+- **Scope**: api, frontend, backend, database, auth, etc.
+- **Description**: Clear, concise explanation of what changed
+
+### When to Commit Locally
+- ✅ After completing a feature or bug fix
+- ✅ After adding tests for new functionality
+- ✅ After refactoring code without breaking changes
+- ✅ After updating documentation
+- ✅ Before switching to a different task
+- ✅ At the end of each development session
+
+### When to Push to GitHub
+- ✅ After completing a major feature or milestone
+- ✅ After fixing critical bugs
+- ✅ After adding comprehensive tests
+- ✅ Before sharing code with team members
+- ✅ After completing a sprint or phase
+- ✅ When ready for code review
+
+### Pre-Push Checklist
+1. **Run all tests**: `npm run verify` (both frontend and backend)
+2. **Check linting**: `npm run lint:all`
+3. **Update task list**: Mark completed tasks in INTERNAL_TASK_LIST.md
+4. **Review changes**: `git diff` to ensure only intended changes
+5. **Update documentation**: README, API docs if needed
+6. **Environment files**: Ensure .env files are not committed
+
+### Branch Strategy
+- **main**: Production-ready code only
+- **develop**: Integration branch for features
+- **feature/**: Individual features (e.g., `feature/ai-endpoints`)
+- **fix/**: Bug fixes (e.g., `fix/auth-validation`)
+- **hotfix/**: Critical production fixes
+
+### Commit Message Examples
+```
+feat(api): add GET /api/cases/:id/ai-summary endpoint
+- Connect to AIService.generateOverallSummary()
+- Add proper error handling and validation
+- Include integration tests with mocked responses
+- Update INTERNAL_TASK_LIST.md progress
+
+fix(frontend): resolve AI insight panel loading state
+- Add proper loading indicators
+- Handle API error states gracefully
+- Improve user experience during AI processing
+
+test(backend): add comprehensive AIService tests
+- Mock OpenRouter API responses
+- Test all AI operation methods
+- Achieve 95% test coverage
+
+docs(api): update endpoint documentation
+- Add request/response examples
+- Document error codes and messages
+- Include authentication requirements
+```
+
+### Reminders for Git Workflow
+- **Before starting work**: Pull latest changes from remote
+- **During development**: Commit frequently with descriptive messages
+- **Before pushing**: Run full test suite and linting
+- **After pushing**: Update task list and notify team if needed
+- **Weekly**: Review and clean up old branches
+
+### Files to Never Commit
+- `.env` files with sensitive data
+- `node_modules/` directories
+- Build artifacts (`dist/`, `build/`)
+- Database files (`*.db`, `*.sqlite`)
+- Log files (`*.log`)
+- IDE-specific files (`.vscode/`, `.idea/`)
+- `INTERNAL_TASK_LIST.md` (private development roadmap)
