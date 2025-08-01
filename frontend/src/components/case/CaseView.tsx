@@ -1,6 +1,7 @@
 import React from 'react';
 import { useParams } from 'react-router-dom';
-import { Card } from '@/components/ui';
+import { Card, LoadingSpinner, ErrorMessage } from '@/components/ui';
+import { useCase } from '@/hooks/useCases';
 import CaseHeader from './CaseHeader';
 import ProcessStepIndicator from './ProcessStepIndicator';
 import AIInsightPanel from './AIInsightPanel';
@@ -13,6 +14,7 @@ interface CaseViewProps {
 
 const CaseView: React.FC<CaseViewProps> = ({ className = '' }) => {
   const { id } = useParams<{ id: string }>();
+  const { data: caseData, isLoading, error } = useCase(id || '');
 
   if (!id) {
     return (
@@ -20,6 +22,29 @@ const CaseView: React.FC<CaseViewProps> = ({ className = '' }) => {
         <div className="text-center py-12">
           <h2 className="text-2xl font-bold text-gray-900 mb-4">Case Not Found</h2>
           <p className="text-gray-500">Invalid case ID provided</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show loading state
+  if (isLoading) {
+    return (
+      <div className="px-4 py-6 sm:px-0">
+        <div className="text-center py-12">
+          <LoadingSpinner />
+          <p className="mt-4 text-gray-600">Loading case details...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state
+  if (error) {
+    return (
+      <div className="px-4 py-6 sm:px-0">
+        <div className="text-center py-12">
+          <ErrorMessage message="Unable to load case details" />
         </div>
       </div>
     );
@@ -40,7 +65,7 @@ const CaseView: React.FC<CaseViewProps> = ({ className = '' }) => {
           <Card>
             <div className="p-6">
               <h3 className="text-lg font-medium text-gray-900 mb-4">Process Steps</h3>
-              <ProcessStepIndicator caseId={id} />
+              <ProcessStepIndicator caseId={id} caseData={caseData} />
             </div>
           </Card>
 
