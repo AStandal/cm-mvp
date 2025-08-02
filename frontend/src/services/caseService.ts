@@ -37,15 +37,31 @@ export const caseService = {
   },
 
   // Get AI summary for a case
-  getAISummary: async (id: string): Promise<any> => {
-    const response = await api.get(`/cases/${id}/ai-summary`);
-    return response.data;
+  getAISummary: async (id: string): Promise<{ summaries: any[] }> => {
+    try {
+      const response = await api.get(`/cases/${id}/ai-summary`);
+      return response.data;
+    } catch (error: any) {
+      // Handle case where endpoint doesn't exist yet (404) or other errors
+      if (error.response?.status === 404) {
+        throw new Error('AI summary endpoint not yet implemented');
+      }
+      throw error;
+    }
   },
 
   // Refresh AI insights for a case
   refreshAIInsights: async (id: string): Promise<any> => {
-    const response = await api.post(`/cases/${id}/ai-refresh`);
-    return response.data;
+    try {
+      const response = await api.post(`/cases/${id}/ai-refresh`);
+      return response.data;
+    } catch (error: any) {
+      // Handle case where endpoint doesn't exist yet (404) or other errors
+      if (error.response?.status === 404) {
+        throw new Error('AI refresh endpoint not yet implemented');
+      }
+      throw error;
+    }
   },
 
   // Get audit trail for a case

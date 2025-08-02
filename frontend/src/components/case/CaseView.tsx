@@ -56,12 +56,7 @@ const CaseView: React.FC<CaseViewProps> = ({ className = '' }) => {
         {/* Right Column - AI Insights and Actions */}
         <div className="space-y-6">
           {/* AI Insights Panel */}
-          <Card>
-            <div className="p-6">
-              <h3 className="text-lg font-medium text-gray-900 mb-4">AI Insights</h3>
-              <AIInsightPanel caseId={id} />
-            </div>
-          </Card>
+          <AIInsightPanel caseId={id} />
 
           {/* Action Buttons */}
           <Card>

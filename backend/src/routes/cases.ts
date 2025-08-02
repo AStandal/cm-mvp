@@ -190,4 +190,133 @@ router.get('/:id', validateCaseId, asyncHandler(async (req: Request, res: Respon
   }
 }));
 
+/**
+ * GET /api/cases/:id/ai-summary
+ * Retrieve AI summaries for a case
+ * Requirements: 1.3, 1.4, 2.1, 2.2, 2.5, 3.1
+ */
+router.get('/:id/ai-summary', validateCaseId, asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  const { id } = req.params;
+
+  try {
+    // Get services and retrieve the case
+    const { caseService, dataService } = getServices();
+    
+    // First verify the case exists
+    const caseData = await caseService.getCaseById(id);
+    if (!caseData) {
+      const errorResponse: ErrorResponse = {
+        error: {
+          code: 'CASE_NOT_FOUND',
+          message: `Case with ID ${id} not found`
+        },
+        timestamp: new Date().toISOString(),
+        requestId: randomUUID()
+      };
+      res.status(404).json(errorResponse);
+      return;
+    }
+
+    // Get AI summaries for the case
+    const summaries = await dataService.getSummaries(id);
+
+    // Return the AI summaries
+    res.status(200).json({
+      success: true,
+      data: {
+        summaries: summaries,
+        caseId: id,
+        totalSummaries: summaries.length
+      },
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (error) {
+    const errorResponse: ErrorResponse = {
+      error: {
+        code: 'AI_SUMMARY_RETRIEVAL_FAILED',
+        message: error instanceof Error ? error.message : 'Failed to retrieve AI summaries',
+        details: process.env.NODE_ENV === 'development' ? error : undefined
+      },
+      timestamp: new Date().toISOString(),
+      requestId: randomUUID()
+    };
+
+    res.status(500).json(errorResponse);
+  }
+}));
+
+/**
+ * POST /api/cases/:id/ai-refresh
+ * Regenerate AI summary for a case
+ * Requirements: 1.3, 1.4, 2.1, 2.2, 2.5, 3.1
+ */
+router.post('/:id/ai-refresh', validateCaseId, asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  const { id } = req.params;
+  const userId = req.headers['x-user-id'] as string || 'system';
+
+  try {
+    // Get services
+    const { caseService, aiService, dataService } = getServices();
+    
+    // First verify the case exists
+    const caseData = await caseService.getCaseById(id);
+    if (!caseData) {
+      const errorResponse: ErrorResponse = {
+        error: {
+          code: 'CASE_NOT_FOUND',
+          message: `Case with ID ${id} not found`
+        },
+        timestamp: new Date().toISOString(),
+        requestId: randomUUID()
+      };
+      res.status(404).json(errorResponse);
+      return;
+    }
+
+    // Generate new AI summary
+    const newSummary = await aiService.generateOverallSummary(caseData);
+    
+    // Save the new summary
+    await dataService.saveSummary(newSummary);
+
+    // Log the AI refresh activity
+    await dataService.logActivity({
+      id: randomUUID(),
+      caseId: id,
+      action: 'ai_summary_refreshed',
+      details: {
+        summaryId: newSummary.id,
+        summaryType: newSummary.type,
+        summaryVersion: newSummary.version
+      },
+      userId: userId,
+      timestamp: new Date()
+    });
+
+    // Return the new summary
+    res.status(200).json({
+      success: true,
+      data: {
+        summary: newSummary,
+        message: 'AI summary regenerated successfully'
+      },
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (error) {
+    const errorResponse: ErrorResponse = {
+      error: {
+        code: 'AI_SUMMARY_REFRESH_FAILED',
+        message: error instanceof Error ? error.message : 'Failed to regenerate AI summary',
+        details: process.env.NODE_ENV === 'development' ? error : undefined
+      },
+      timestamp: new Date().toISOString(),
+      requestId: randomUUID()
+    };
+
+    res.status(500).json(errorResponse);
+  }
+}));
+
 export default router;

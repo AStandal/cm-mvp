@@ -52,7 +52,7 @@ if (NODE_ENV === 'development') {
 }
 
 // Health check endpoint
-app.get('/health', (_req: Request, res: Response) => {
+app.get('/api/health', (_req: Request, res: Response) => {
   res.json({ 
     status: 'OK', 
     timestamp: new Date().toISOString(),
@@ -62,7 +62,7 @@ app.get('/health', (_req: Request, res: Response) => {
 });
 
 // Version endpoint
-app.get('/version', (_req: Request, res: Response) => {
+app.get('/api/version', (_req: Request, res: Response) => {
   res.json({
     version: '1.0.0',
     name: 'AI Case Management API',
