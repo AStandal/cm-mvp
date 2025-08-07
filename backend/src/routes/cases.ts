@@ -341,4 +341,104 @@ router.post('/:id/ai-refresh', validateCaseId, asyncHandler(async (req: Request,
   }
 }));
 
+/**
+ * GET /api/cases/:id/notes
+ * Retrieve all notes for a case
+ * Requirements: 2.1, 2.2
+ */
+router.get('/:id/notes', validateCaseId, asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  const { id } = req.params;
+
+  try {
+    // Get services and retrieve notes
+    const { dataService } = getServices();
+    const notes = await dataService.getCaseNotes(id);
+
+    // Return the notes data
+    res.status(200).json({
+      success: true,
+      data: {
+        notes: notes.map(note => ({
+          id: note.id,
+          caseId: note.case_id,
+          content: note.content,
+          createdBy: note.created_by,
+          createdAt: note.created_at
+        }))
+      },
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (error) {
+    const errorResponse: ErrorResponse = {
+      error: {
+        code: 'NOTES_RETRIEVAL_FAILED',
+        message: error instanceof Error ? error.message : 'Failed to retrieve case notes',
+        details: process.env.NODE_ENV === 'development' ? error : undefined
+      },
+      timestamp: new Date().toISOString(),
+      requestId: randomUUID()
+    };
+
+    res.status(500).json(errorResponse);
+  }
+}));
+
+/**
+ * POST /api/cases/:id/notes
+ * Add a new note to a case
+ * Requirements: 2.1, 2.2
+ */
+router.post('/:id/notes', validateCaseId, asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  const { id } = req.params;
+  const { content } = req.body;
+  const userId = req.headers['x-user-id'] as string || 'system';
+
+  // Validate content
+  if (!content || typeof content !== 'string' || content.trim().length === 0) {
+    const errorResponse: ErrorResponse = {
+      error: {
+        code: 'INVALID_NOTE_CONTENT',
+        message: 'Note content is required and must be a non-empty string'
+      },
+      timestamp: new Date().toISOString(),
+      requestId: randomUUID()
+    };
+    res.status(400).json(errorResponse);
+    return;
+  }
+
+  try {
+    // Get services and add note
+    const { dataService, caseService } = getServices();
+    await dataService.addCaseNote(id, content.trim(), userId);
+
+    // Get the updated case data
+    const updatedCase = await caseService.getCaseById(id);
+
+    // Return the updated case data
+    res.status(201).json({
+      success: true,
+      data: {
+        case: updatedCase
+      },
+      message: 'Note added successfully',
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (error) {
+    const errorResponse: ErrorResponse = {
+      error: {
+        code: 'NOTE_ADDITION_FAILED',
+        message: error instanceof Error ? error.message : 'Failed to add note',
+        details: process.env.NODE_ENV === 'development' ? error : undefined
+      },
+      timestamp: new Date().toISOString(),
+      requestId: randomUUID()
+    };
+
+    res.status(500).json(errorResponse);
+  }
+}));
+
 export default router;

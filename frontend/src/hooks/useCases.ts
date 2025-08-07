@@ -107,6 +107,8 @@ export const useAddCaseNote = () => {
     onSuccess: (data) => {
       // Update the specific case in cache
       queryClient.setQueryData(caseKeys.detail(data.id), data);
+      // Invalidate notes cache to refresh the notes list
+      queryClient.invalidateQueries({ queryKey: caseKeys.notes(data.id) });
       // Invalidate AI summary as it may need to be regenerated
       queryClient.invalidateQueries({ queryKey: caseKeys.aiSummary(data.id) });
     },

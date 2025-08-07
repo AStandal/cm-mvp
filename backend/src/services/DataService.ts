@@ -421,7 +421,7 @@ export class DataService {
 
     // Private helper methods
 
-    private async getCaseNotes(caseId: string): Promise<CaseNote[]> {
+    public async getCaseNotes(caseId: string): Promise<CaseNote[]> {
         const stmt = this.db.prepare(`
       SELECT * FROM case_notes 
       WHERE case_id = ? 

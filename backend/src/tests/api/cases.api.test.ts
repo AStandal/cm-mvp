@@ -258,21 +258,206 @@ describe('API Tests - Case Management Endpoints', () => {
   });
 
   describe('POST /api/cases/:id/notes', () => {
-    it('should return 404 for unimplemented endpoint', async () => {
-      const testCaseId = 'test-case-123';
+    it('should add a note to an existing case', async () => {
+      // First create a case
+      const newCase = {
+        applicationData: {
+          applicantName: 'Test User',
+          applicantEmail: 'test@example.com',
+          applicationType: 'standard',
+          submissionDate: new Date().toISOString(),
+          documents: [],
+          formData: {}
+        }
+      };
+
+      const createResponse = await request(app)
+        .post('/api/cases')
+        .send(newCase)
+        .expect(201);
+
+      const caseId = createResponse.body.data.case.id;
+
+      // Add a note to the case
       const newNote = {
-        content: 'This is a test note',
-        userId: 'test-user'
+        content: 'This is a test note'
       };
 
       const response = await request(app)
-        .post(`/api/cases/${testCaseId}/notes`)
+        .post(`/api/cases/${caseId}/notes`)
+        .send(newNote)
+        .expect(201);
+
+      expect(response.body).toMatchObject({
+        success: true,
+        data: {
+          case: {
+            id: caseId,
+            applicationData: {
+              applicantName: 'Test User',
+              applicantEmail: 'test@example.com',
+              applicationType: 'standard'
+            },
+            status: 'active',
+            currentStep: 'received'
+          }
+        },
+        message: 'Note added successfully'
+      });
+    });
+
+    it('should validate note content', async () => {
+      // First create a case
+      const newCase = {
+        applicationData: {
+          applicantName: 'Test User',
+          applicantEmail: 'test@example.com',
+          applicationType: 'standard',
+          submissionDate: new Date().toISOString(),
+          documents: [],
+          formData: {}
+        }
+      };
+
+      const createResponse = await request(app)
+        .post('/api/cases')
+        .send(newCase)
+        .expect(201);
+
+      const caseId = createResponse.body.data.case.id;
+
+      // Try to add an empty note
+      const emptyNote = {
+        content: ''
+      };
+
+      const response = await request(app)
+        .post(`/api/cases/${caseId}/notes`)
+        .send(emptyNote)
+        .expect(400);
+
+      expect(response.body).toMatchObject({
+        error: {
+          code: 'INVALID_NOTE_CONTENT',
+          message: 'Note content is required and must be a non-empty string'
+        }
+      });
+    });
+
+    it('should return 404 for non-existent case', async () => {
+      const newNote = {
+        content: 'This is a test note'
+      };
+
+      const response = await request(app)
+        .post('/api/cases/non-existent-id/notes')
         .send(newNote)
         .expect(404);
 
       expect(response.body).toMatchObject({
-        error: 'API endpoints not yet implemented',
-        message: 'This endpoint will be available in future releases'
+        error: {
+          code: 'CASE_NOT_FOUND',
+          message: 'Case with ID non-existent-id not found'
+        }
+      });
+    });
+  });
+
+  describe('GET /api/cases/:id/notes', () => {
+    it('should retrieve notes for an existing case', async () => {
+      // First create a case
+      const newCase = {
+        applicationData: {
+          applicantName: 'Test User',
+          applicantEmail: 'test@example.com',
+          applicationType: 'standard',
+          submissionDate: new Date().toISOString(),
+          documents: [],
+          formData: {}
+        }
+      };
+
+      const createResponse = await request(app)
+        .post('/api/cases')
+        .send(newCase)
+        .expect(201);
+
+      const caseId = createResponse.body.data.case.id;
+
+      // Add a note to the case
+      const newNote = {
+        content: 'This is a test note'
+      };
+
+      await request(app)
+        .post(`/api/cases/${caseId}/notes`)
+        .send(newNote)
+        .expect(201);
+
+      // Retrieve notes for the case
+      const response = await request(app)
+        .get(`/api/cases/${caseId}/notes`)
+        .expect(200);
+
+      expect(response.body).toMatchObject({
+        success: true,
+        data: {
+          notes: expect.arrayContaining([
+            expect.objectContaining({
+              id: expect.any(String),
+              caseId: caseId,
+              content: 'This is a test note',
+              createdBy: expect.any(String),
+              createdAt: expect.any(String)
+            })
+          ])
+        }
+      });
+    });
+
+    it('should return empty array for case with no notes', async () => {
+      // First create a case
+      const newCase = {
+        applicationData: {
+          applicantName: 'Test User',
+          applicantEmail: 'test@example.com',
+          applicationType: 'standard',
+          submissionDate: new Date().toISOString(),
+          documents: [],
+          formData: {}
+        }
+      };
+
+      const createResponse = await request(app)
+        .post('/api/cases')
+        .send(newCase)
+        .expect(201);
+
+      const caseId = createResponse.body.data.case.id;
+
+      // Retrieve notes for the case (should be empty)
+      const response = await request(app)
+        .get(`/api/cases/${caseId}/notes`)
+        .expect(200);
+
+      expect(response.body).toMatchObject({
+        success: true,
+        data: {
+          notes: []
+        }
+      });
+    });
+
+    it('should return 404 for non-existent case', async () => {
+      const response = await request(app)
+        .get('/api/cases/non-existent-id/notes')
+        .expect(404);
+
+      expect(response.body).toMatchObject({
+        error: {
+          code: 'CASE_NOT_FOUND',
+          message: 'Case with ID non-existent-id not found'
+        }
       });
     });
   });
