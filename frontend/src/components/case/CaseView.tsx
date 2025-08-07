@@ -16,7 +16,11 @@ const CaseView: React.FC<CaseViewProps> = ({ className = '' }) => {
   const { id } = useParams<{ id: string }>();
   const { data: caseData, isLoading, error } = useCase(id || '');
 
+  // Debug logging
+  console.log('CaseView render:', { id, isLoading, error, hasData: !!caseData });
+
   if (!id) {
+    console.log('CaseView: No ID provided');
     return (
       <div className="px-4 py-6 sm:px-0">
         <div className="text-center py-12">
@@ -29,6 +33,7 @@ const CaseView: React.FC<CaseViewProps> = ({ className = '' }) => {
 
   // Show loading state
   if (isLoading) {
+    console.log('CaseView: Loading state');
     return (
       <div className="px-4 py-6 sm:px-0">
         <div className="text-center py-12">
@@ -41,6 +46,7 @@ const CaseView: React.FC<CaseViewProps> = ({ className = '' }) => {
 
   // Show error state
   if (error) {
+    console.log('CaseView: Error state', error);
     return (
       <div className="px-4 py-6 sm:px-0">
         <div className="text-center py-12">
@@ -49,6 +55,8 @@ const CaseView: React.FC<CaseViewProps> = ({ className = '' }) => {
       </div>
     );
   }
+
+  console.log('CaseView: Rendering with data', caseData);
 
   return (
     <div className={`px-4 py-6 sm:px-0 ${className}`}>

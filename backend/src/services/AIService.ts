@@ -92,6 +92,25 @@ export class AIService {
         promptVersion: '1.0'
       });
 
+      // In development mode, provide fallback data if AI service is unavailable
+      if (process.env.NODE_ENV === 'development' && error instanceof Error && 
+          (error.message.includes('401') || error.message.includes('OpenRouter API failed'))) {
+        
+        console.warn('AI service unavailable in development mode, providing fallback data');
+        
+        // Return fallback AI summary for development
+        return this.createAISummary({
+          content: `This is a development fallback AI summary for case ${caseData.id}. The application appears to be a ${caseData.applicationData.applicationType} application submitted by ${caseData.applicationData.applicantName}. The case is currently in ${caseData.currentStep} status.`,
+          recommendations: [
+            'Review application completeness',
+            'Verify applicant information',
+            'Check required documentation',
+            'Schedule follow-up if needed'
+          ],
+          confidence: 0.75
+        }, caseData.id);
+      }
+      
       throw new Error(`Failed to generate overall summary: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }

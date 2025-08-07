@@ -425,7 +425,9 @@ Format as JSON:
     }
 
     try {
-      const parsed = JSON.parse(response);
+      // Clean the response to extract JSON from markdown if needed
+      const cleanedResponse = this.extractJSONFromResponse(response);
+      const parsed = JSON.parse(cleanedResponse);
       const result = template.schema.safeParse(parsed);
       
       if (result.success) {
@@ -443,6 +445,24 @@ Format as JSON:
         errors: [`Invalid JSON response: ${parseError instanceof Error ? parseError.message : 'Unknown error'}`] 
       };
     }
+  }
+
+  /**
+   * Extract JSON from markdown-formatted responses
+   */
+  private extractJSONFromResponse(response: string): string {
+    // Remove markdown code blocks
+    let cleaned = response.replace(/```json\s*/g, '').replace(/```\s*$/g, '');
+    
+    // Remove any leading/trailing whitespace
+    cleaned = cleaned.trim();
+    
+    // If the response is still wrapped in markdown, try to extract just the JSON part
+    if (cleaned.startsWith('```') && cleaned.endsWith('```')) {
+      cleaned = cleaned.slice(3, -3).trim();
+    }
+    
+    return cleaned;
   }
 
   /**

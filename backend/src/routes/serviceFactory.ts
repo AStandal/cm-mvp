@@ -16,7 +16,7 @@ export function createServices(): ServiceContainer {
 
   // Create OpenRouter configuration
   const openRouterConfig = {
-    modelId: process.env.DEFAULT_MODEL || 'x-ai/grok-beta',
+    modelId: process.env.DEFAULT_MODEL || 'openai/gpt-oss-20b:free',
     provider: 'openrouter' as const,
     apiKey: process.env.OPENROUTER_API_KEY || 'test-key',
     baseUrl: process.env.OPENROUTER_BASE_URL || 'https://openrouter.ai/api/v1',

@@ -166,7 +166,7 @@ export class OpenRouterClient {
  */
 export function createOpenRouterClient(): OpenRouterClient {
   const config: ModelConfig = {
-    modelId: process.env.DEFAULT_MODEL || 'x-ai/grok-beta',
+    modelId: process.env.DEFAULT_MODEL || 'openai/gpt-oss-20b:free',
     provider: 'openrouter',
     apiKey: process.env.OPENROUTER_API_KEY || '',
     baseUrl: process.env.OPENROUTER_BASE_URL || 'https://openrouter.ai/api/v1',

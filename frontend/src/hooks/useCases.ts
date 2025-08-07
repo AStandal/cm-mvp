@@ -41,7 +41,12 @@ export const useCase = (id: string) => {
 export const useAISummary = (id: string) => {
   return useQuery({
     queryKey: caseKeys.aiSummary(id),
-    queryFn: () => caseService.getAISummary(id),
+    queryFn: async () => {
+      console.log('useAISummary: Fetching AI summary for case:', id);
+      const result = await caseService.getAISummary(id);
+      console.log('useAISummary: Received data for case:', id, 'Data:', result);
+      return result;
+    },
     enabled: !!id,
     staleTime: 1000 * 60 * 1, // 1 minute
   });
@@ -120,12 +125,19 @@ export const useRefreshAIInsights = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (id: string) => caseService.refreshAIInsights(id),
-    onSuccess: (_, id) => {
+    mutationFn: (id: string) => {
+      console.log('useRefreshAIInsights: Starting refresh for case:', id);
+      return caseService.refreshAIInsights(id);
+    },
+    onSuccess: (data, id) => {
+      console.log('useRefreshAIInsights: Refresh successful for case:', id, 'Data:', data);
       // Invalidate AI summary to fetch the refreshed version
       queryClient.invalidateQueries({ queryKey: caseKeys.aiSummary(id) });
       // Also invalidate the case details as AI summaries are part of the case
       queryClient.invalidateQueries({ queryKey: caseKeys.detail(id) });
+    },
+    onError: (error, id) => {
+      console.error('useRefreshAIInsights: Refresh failed for case:', id, 'Error:', error);
     },
   });
 };

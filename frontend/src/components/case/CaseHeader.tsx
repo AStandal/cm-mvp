@@ -63,7 +63,7 @@ const CaseHeader: React.FC<CaseHeaderProps> = ({ caseId }) => {
             </p>
           </div>
           <div className="flex items-center space-x-3">
-            <Badge variant={caseData.status === 'active' ? 'default' : 'secondary'}>
+            <Badge variant={caseData.status === 'active' ? 'default' : 'info'}>
               {caseData.status.charAt(0).toUpperCase() + caseData.status.slice(1)}
             </Badge>
             <Badge variant="info">
