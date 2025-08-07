@@ -79,3 +79,11 @@ INTERNAL_TASK_LIST.md
 # Keep .kiro/ directory as it contains project specs
 # Keep .github/ directory for CI/CD workflows
 # Keep .githooks/ directory for git hooks
+
+# Backend test files
+backend/test-*.js
+
+# Frontend test files
+frontend/test-*.js
+
+# Documentation

@@ -196,6 +196,35 @@ export class DataService {
     }
 
     /**
+     * Get all cases
+     */
+    public async getAllCases(): Promise<CaseModel[]> {
+        try {
+            const stmt = this.db.prepare(`
+        SELECT * FROM cases ORDER BY created_at DESC
+      `);
+
+            const caseRows = stmt.all() as Case[];
+            const cases: CaseModel[] = [];
+
+            for (const caseRow of caseRows) {
+                const [notes, aiSummaries, auditTrail] = await Promise.all([
+                    this.getCaseNotes(caseRow.id),
+                    this.getCaseSummaries(caseRow.id),
+                    this.getAuditTrail(caseRow.id)
+                ]);
+
+                cases.push(this.mapDatabaseCaseToModel(caseRow, notes, aiSummaries, auditTrail));
+            }
+
+            return cases;
+
+        } catch (error) {
+            throw new Error(`Failed to get all cases: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+    }
+
+    /**
      * Save an AI summary
      */
     public async saveSummary(summary: AISummaryModel): Promise<void> {

@@ -40,7 +40,7 @@ cd backend
 npm run dev
 ```
 
-The backend server will start on `http://localhost:3001`
+The backend server will start on `http://localhost:3002`
 
 #### Frontend (React App)
 ```bash

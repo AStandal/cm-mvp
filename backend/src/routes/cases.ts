@@ -141,6 +141,50 @@ router.post('/', validateInput(createCaseSchema), asyncHandler(async (req: Reque
 }));
 
 /**
+ * GET /api/cases
+ * Retrieve all cases with optional filtering
+ * Requirements: 1.1, 1.2
+ */
+router.get('/', asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  const { status, page = 1, limit = 10 } = req.query;
+
+  try {
+    // Get services and retrieve cases
+    const { caseService } = getServices();
+    const cases = await caseService.getAllCases({
+      status: status as string,
+      page: parseInt(page as string),
+      limit: parseInt(limit as string)
+    });
+
+    // Return the cases data
+    res.status(200).json({
+      success: true,
+      data: {
+        cases: cases.cases,
+        total: cases.total,
+        page: cases.page,
+        limit: cases.limit
+      },
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (error) {
+    const errorResponse: ErrorResponse = {
+      error: {
+        code: 'CASES_RETRIEVAL_FAILED',
+        message: error instanceof Error ? error.message : 'Failed to retrieve cases',
+        details: process.env.NODE_ENV === 'development' ? error : undefined
+      },
+      timestamp: new Date().toISOString(),
+      requestId: randomUUID()
+    };
+
+    res.status(500).json(errorResponse);
+  }
+}));
+
+/**
  * GET /api/cases/:id
  * Retrieve case details by ID
  * Requirements: 1.1, 1.2
@@ -180,6 +224,113 @@ router.get('/:id', validateCaseId, asyncHandler(async (req: Request, res: Respon
       error: {
         code: 'CASE_RETRIEVAL_FAILED',
         message: error instanceof Error ? error.message : 'Failed to retrieve case',
+        details: process.env.NODE_ENV === 'development' ? error : undefined
+      },
+      timestamp: new Date().toISOString(),
+      requestId: randomUUID()
+    };
+
+    res.status(500).json(errorResponse);
+  }
+}));
+
+/**
+ * GET /api/cases/:id/ai-summary
+ * Retrieve AI summary for a case
+ * Requirements: 1.3, 1.4, 2.1, 2.2
+ */
+router.get('/:id/ai-summary', validateCaseId, asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  const { id } = req.params;
+
+  try {
+    // Get services and retrieve the case
+    const { caseService, aiService } = getServices();
+    const caseData = await caseService.getCaseById(id);
+
+    if (!caseData) {
+      const errorResponse: ErrorResponse = {
+        error: {
+          code: 'CASE_NOT_FOUND',
+          message: `Case with ID ${id} not found`
+        },
+        timestamp: new Date().toISOString(),
+        requestId: randomUUID()
+      };
+      res.status(404).json(errorResponse);
+      return;
+    }
+
+    // Generate AI summary
+    const aiSummary = await aiService.generateOverallSummary(caseData);
+
+    // Return the AI summary
+    res.status(200).json({
+      success: true,
+      data: {
+        aiSummary
+      },
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (error) {
+    const errorResponse: ErrorResponse = {
+      error: {
+        code: 'AI_SUMMARY_GENERATION_FAILED',
+        message: error instanceof Error ? error.message : 'Failed to generate AI summary',
+        details: process.env.NODE_ENV === 'development' ? error : undefined
+      },
+      timestamp: new Date().toISOString(),
+      requestId: randomUUID()
+    };
+
+    res.status(500).json(errorResponse);
+  }
+}));
+
+/**
+ * POST /api/cases/:id/ai-refresh
+ * Refresh AI insights for a case
+ * Requirements: 2.1, 2.4
+ */
+router.post('/:id/ai-refresh', validateCaseId, asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  const { id } = req.params;
+
+  try {
+    // Get services and retrieve the case
+    const { caseService, aiService } = getServices();
+    const caseData = await caseService.getCaseById(id);
+
+    if (!caseData) {
+      const errorResponse: ErrorResponse = {
+        error: {
+          code: 'CASE_NOT_FOUND',
+          message: `Case with ID ${id} not found`
+        },
+        timestamp: new Date().toISOString(),
+        requestId: randomUUID()
+      };
+      res.status(404).json(errorResponse);
+      return;
+    }
+
+    // Generate fresh AI summary
+    const aiSummary = await aiService.generateOverallSummary(caseData);
+
+    // Return the refreshed AI summary
+    res.status(200).json({
+      success: true,
+      data: {
+        aiSummary
+      },
+      message: 'AI insights refreshed successfully',
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (error) {
+    const errorResponse: ErrorResponse = {
+      error: {
+        code: 'AI_REFRESH_FAILED',
+        message: error instanceof Error ? error.message : 'Failed to refresh AI insights',
         details: process.env.NODE_ENV === 'development' ? error : undefined
       },
       timestamp: new Date().toISOString(),

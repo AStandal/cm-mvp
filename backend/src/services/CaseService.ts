@@ -320,6 +320,45 @@ export class CaseService {
     }
   }
 
+  /**
+   * Get all cases with optional filtering and pagination
+   * Requirements: 1.1, 1.2
+   */
+  async getAllCases(params?: {
+    status?: string;
+    page?: number;
+    limit?: number;
+  }): Promise<{ cases: Case[]; total: number; page: number; limit: number }> {
+    try {
+      const { status, page = 1, limit = 10 } = params || {};
+      
+      // Get all cases from database
+      const allCases = await this.dataService.getAllCases();
+      
+      // Filter by status if provided
+      let filteredCases = allCases;
+      if (status) {
+        const statusEnum = status as CaseStatus;
+        filteredCases = allCases.filter(case_ => case_.status === statusEnum);
+      }
+      
+      // Calculate pagination
+      const total = filteredCases.length;
+      const startIndex = (page - 1) * limit;
+      const endIndex = startIndex + limit;
+      const paginatedCases = filteredCases.slice(startIndex, endIndex);
+      
+      return {
+        cases: paginatedCases,
+        total,
+        page,
+        limit
+      };
+    } catch (error) {
+      throw new Error(`Failed to get all cases: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
   // Private helper methods
 
   /**

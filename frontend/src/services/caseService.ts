@@ -36,6 +36,12 @@ export const caseService = {
     return response.data.data.case;
   },
 
+  // Get notes for a case
+  getCaseNotes: async (id: string): Promise<any[]> => {
+    const response = await api.get(`/cases/${id}/notes`);
+    return response.data.data.notes;
+  },
+
   // Get AI summary for a case
   getAISummary: async (id: string): Promise<any> => {
     const response = await api.get(`/cases/${id}/ai-summary`);

@@ -11,6 +11,7 @@ export const caseKeys = {
   detail: (id: string) => [...caseKeys.details(), id] as const,
   aiSummary: (id: string) => [...caseKeys.detail(id), 'ai-summary'] as const,
   auditTrail: (id: string) => [...caseKeys.detail(id), 'audit'] as const,
+  notes: (id: string) => [...caseKeys.detail(id), 'notes'] as const,
 };
 
 // Hook to get all cases
@@ -53,6 +54,16 @@ export const useAuditTrail = (id: string) => {
     queryFn: () => caseService.getAuditTrail(id),
     enabled: !!id,
     staleTime: 1000 * 60 * 5, // 5 minutes
+  });
+};
+
+// Hook to get notes for a case
+export const useCaseNotes = (id: string) => {
+  return useQuery({
+    queryKey: caseKeys.notes(id),
+    queryFn: () => caseService.getCaseNotes(id),
+    enabled: !!id,
+    staleTime: 1000 * 60 * 2, // 2 minutes
   });
 };
 
