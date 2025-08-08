@@ -6,10 +6,6 @@ on:
   pull_request:
     branches: [ main, develop ]
 
-permissions:
-  contents: read
-  pull-requests: write
-
 jobs:
   verify:
     runs-on: ubuntu-latest
@@ -24,27 +20,7 @@ jobs:
 
     - name: Hello World (PR)
       if: github.event_name == 'pull_request'
-      id: hello
-      run: |
-        set -euo pipefail
-        OUTPUT=$(bash scripts/hello.sh)
-        echo "$OUTPUT"
-        echo "output<<EOF" >> $GITHUB_OUTPUT
-        echo "$OUTPUT" >> $GITHUB_OUTPUT
-        echo "EOF" >> $GITHUB_OUTPUT
-
-    - name: Comment hello output on PR
-      if: github.event_name == 'pull_request'
-      uses: peter-evans/create-or-update-comment@v4
-      with:
-        token: ${{ secrets.GITHUB_TOKEN }}
-        issue-number: ${{ github.event.pull_request.number }}
-        body: |
-          ✅ CI Hello World
-
-          ```
-          ${{ steps.hello.outputs.output }}
-          ```
+      run: bash scripts/hello.sh
 
     - name: Setup Node.js ${{ matrix.node-version }}
       uses: actions/setup-node@v4
