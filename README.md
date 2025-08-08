@@ -95,3 +95,32 @@ cd frontend && npm test
 ├── .githooks/        # Git hooks for verification
 └── .kiro/           # Project specifications
 ```
+
+## Playwright MCP Server (Basic)
+
+A minimal Model Context Protocol server is provided to allow LLM tools to run and verify Playwright UI tests.
+
+- Location: `mcp/playwright-mcp`
+- Run locally: `npm run mcp:playwright`
+- Tools exposed:
+  - `run_playwright_tests`:
+    - Inputs: `cwd` (default `frontend`), `testFilter` (grep or file path), `headless` (default true), `reporter` (default `json`)
+    - Behavior: Runs `npx playwright test` with JSON reporter and returns a structured summary
+  - `list_playwright_tests`:
+    - Inputs: `cwd` (default `frontend`)
+    - Behavior: Runs `npx playwright test --list` and returns discovered tests
+
+### Frontend E2E Setup
+
+- Config: `frontend/playwright.config.ts` (uses Vite dev server on port 5173)
+- Smoke test: `frontend/e2e/smoke.spec.ts`
+- Run locally: `cd frontend && npm run e2e`
+
+### AI Interaction Guidance
+
+- Prefer `list_playwright_tests` first to discover available tests and select targets
+- Use `run_playwright_tests` with a `testFilter` to run focused tests and parse the JSON `summary` for pass/fail details
+- For headful debugging, pass `headless: false` (if environment supports a display)
+- If the app server is not running, Playwright will auto-start Vite via the `webServer` setting
+
+Note: Browser binaries are not auto-installed. If needed, run `npx playwright install` inside `frontend`.

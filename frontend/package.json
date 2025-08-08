@@ -11,6 +11,7 @@
     "test": "vitest --run",
     "test:watch": "vitest",
     "test:verify": "vitest --run src/tests/verification.test.ts --config vitest.config.ts",
+    "e2e": "playwright test",
     "audit": "npm audit",
     "audit:fix": "npm audit fix",
     "audit:force": "npm audit fix --force",
@@ -47,6 +48,7 @@
     "tailwindcss": "^4.1.11",
     "typescript": "^5.8.3",
     "vite": "^7.0.5",
-    "vitest": "^3.2.4"
+    "vitest": "^3.2.4",
+    "@playwright/test": "^1.49.0"
   }
 }
