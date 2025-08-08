@@ -18,6 +18,10 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
+    - name: Hello World (PR)
+      if: github.event_name == 'pull_request'
+      run: bash scripts/hello.sh
+
     - name: Setup Node.js ${{ matrix.node-version }}
       uses: actions/setup-node@v4
       with:
