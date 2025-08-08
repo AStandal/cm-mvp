@@ -4,7 +4,7 @@ const Layout = () => {
   const location = useLocation();
 
   const navigation = [
-    { name: 'Dashboard', href: '/', current: location.pathname === '/' },
+    { name: 'Dashboard', href: '/dashboard', current: location.pathname === '/dashboard' },
     { name: 'New Case', href: '/cases/new', current: location.pathname === '/cases/new' },
   ];
 
