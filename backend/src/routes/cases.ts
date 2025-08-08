@@ -4,7 +4,24 @@ import { ApplicationData, ErrorResponse } from '../types/index.js';
 import { randomUUID } from 'crypto';
 import { getServices } from './serviceFactory.js';
 
-const router = Router();
+const router = Router({ strict: true });
+
+// Return 404 for trailing-slash or whitespace-only ID cases
+router.use((req: Request, res: Response, next: NextFunction): void => {
+  if (req.method === 'GET' && req.baseUrl === '/api/cases') {
+    const requestPath = req.path;
+    const originalPath = req.originalUrl.split('?')[0];
+
+    const isTrailingSlashOnly = requestPath === '/' && originalPath.endsWith('/');
+    const isWhitespaceId = /^\/\s+$/.test(requestPath);
+
+    if (isTrailingSlashOnly || isWhitespaceId) {
+      res.sendStatus(404);
+      return;
+    }
+  }
+  next();
+});
 
 // Validation schemas
 const applicationDataSchema = z.object({
@@ -63,13 +80,13 @@ const validateCaseId = (req: Request, res: Response, next: NextFunction): void =
   if (!id || typeof id !== 'string' || decodedId.trim().length === 0) {
     const errorResponse: ErrorResponse = {
       error: {
-        code: 'INVALID_CASE_ID',
-        message: 'Case ID is required and must be a valid string'
+        code: 'CASE_NOT_FOUND',
+        message: 'Case ID not found'
       },
       timestamp: new Date().toISOString(),
       requestId: randomUUID()
     };
-    res.status(400).json(errorResponse);
+    res.status(404).json(errorResponse);
     return;
   }
   

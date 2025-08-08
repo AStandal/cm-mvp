@@ -2,15 +2,19 @@ name: Project Verification
 
 on:
   push:
-    branches: ["**"]
+    branches: ["master"]
   pull_request:
     branches: ["**"]
   workflow_dispatch:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   verify:
     runs-on: ubuntu-latest
-    
+
     strategy:
       matrix:
         node-version: [18.x, 20.x]
