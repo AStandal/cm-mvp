@@ -139,9 +139,15 @@ export class DataService {
                 updateValues.push(JSON.stringify(updates.applicationData));
             }
 
-            // Always update the updated_at timestamp
+            // Always update the updated_at timestamp (strictly monotonic)
+            const currentRow = this.db.prepare(`SELECT updated_at FROM cases WHERE id = ?`).get(caseId) as { updated_at: string } | undefined;
+            const prevMs = currentRow ? new Date(currentRow.updated_at).getTime() : 0;
+            const nowMs = Date.now();
+            const nextMs = Math.max(nowMs, prevMs + 1);
+            const nextIso = new Date(nextMs).toISOString();
+
             updateFields.push('updated_at = ?');
-            updateValues.push(new Date().toISOString());
+            updateValues.push(nextIso);
 
             if (updateFields.length === 1) { // Only updated_at was added
                 throw new Error('No valid fields to update');

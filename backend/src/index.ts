@@ -46,6 +46,22 @@ app.use(express.json({
 }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
+// JSON parse error handler (malformed JSON)
+app.use((err: any, _req: Request, res: Response, next: NextFunction): void => {
+  const isBodyParserSyntaxError = err?.type === 'entity.parse.failed' || (err instanceof SyntaxError && (err as any)?.status === 400);
+  if (isBodyParserSyntaxError) {
+    if (NODE_ENV !== 'test') {
+      console.warn('Invalid JSON payload');
+    }
+    res.status(400).json({
+      error: 'Invalid JSON',
+      message: 'Malformed JSON in request body'
+    });
+    return;
+  }
+  return next(err);
+});
+
 // Request logging middleware (development only)
 if (NODE_ENV === 'development') {
   app.use((req: Request, _res: Response, next: NextFunction) => {
@@ -97,8 +113,10 @@ app.use((_req: Request, res: Response) => {
 });
 
 // Global error handling middleware
-app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
-  console.error('Unhandled error:', err);
+app.use((err: Error, _req: Request, res: Response, _next: NextFunction): void => {
+  if (NODE_ENV !== 'test') {
+    console.error('Unhandled error:', err);
+  }
   
   // Don't expose error details in production
   const isDevelopment = NODE_ENV === 'development';
@@ -106,7 +124,7 @@ app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
   res.status(500).json({
     error: 'Internal server error',
     message: isDevelopment ? err.message : 'Something went wrong',
-    ...(isDevelopment && { stack: err.stack })
+    ...(isDevelopment && { stack: (err as any).stack })
   });
 });
 
