@@ -42,6 +42,9 @@ jobs:
     - name: Run comprehensive verification
       run: npm run verify
 
+    - name: Run MCP Playwright verification (no browsers required)
+      run: npm --workspace mcp/playwright-mcp run test
+
     - name: Upload verification results
       if: failure()
       uses: actions/upload-artifact@v4
@@ -52,3 +55,4 @@ jobs:
           frontend/dist/
           backend/coverage/
           frontend/coverage/
+          mcp/playwright-mcp/dist/
