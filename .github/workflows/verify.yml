@@ -42,6 +42,12 @@ jobs:
     - name: Run comprehensive verification
       run: npm run verify
 
+    - name: Install Playwright browsers
+      run: cd frontend && npx playwright install --with-deps
+
+    - name: Run Playwright E2E tests
+      run: cd frontend && npm run e2e
+
     - name: Run MCP Playwright verification (no browsers required)
       run: npm --workspace mcp/playwright-mcp run test
 
@@ -55,4 +61,6 @@ jobs:
           frontend/dist/
           backend/coverage/
           frontend/coverage/
+          frontend/playwright-report/
+          frontend/test-results/
           mcp/playwright-mcp/dist/
