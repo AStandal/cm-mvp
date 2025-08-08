@@ -2,21 +2,30 @@ name: Project Verification
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: ["master"]
   pull_request:
-    branches: [ main, develop ]
+    branches: ["**"]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   verify:
     runs-on: ubuntu-latest
-    
+
     strategy:
       matrix:
-        node-version: [18.x, 20.x]
+        node-version: [20.x]
 
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
+
+    - name: Hello World (PR)
+      if: github.event_name == 'pull_request'
+      run: bash scripts/hello.sh
 
     - name: Setup Node.js ${{ matrix.node-version }}
       uses: actions/setup-node@v4

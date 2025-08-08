@@ -12,7 +12,8 @@
     "test:all": "cd backend && npm test && cd ../frontend && npm test",
     "lint:all": "cd backend && npm run lint && cd ../frontend && npm run lint",
     "dev:backend": "cd backend && npm run dev",
-    "dev:frontend": "cd frontend && npm run dev"
+    "dev:frontend": "cd frontend && npm run dev",
+    "ci:hello": "bash scripts/hello.sh"
   },
   "keywords": [
     "ai",

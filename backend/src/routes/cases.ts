@@ -6,6 +6,8 @@ import { getServices } from './serviceFactory.js';
 
 const router = Router();
 
+
+
 // Validation schemas
 const applicationDataSchema = z.object({
   applicantName: z.string().min(1, 'Applicant name is required').max(255),
