@@ -654,7 +654,7 @@ export class AIService {
 
   // Private helper methods for building template data
 
-  private buildOverallSummaryData(caseData: Case): Record<string, any> {
+  private buildOverallSummaryData(caseData: Case): Record<string, unknown> {
     return {
       caseId: caseData.id,
       status: caseData.status,
@@ -668,7 +668,7 @@ export class AIService {
     };
   }
 
-  private buildStepRecommendationData(caseData: Case, step: ProcessStep): Record<string, any> {
+  private buildStepRecommendationData(caseData: Case, step: ProcessStep): Record<string, unknown> {
     return {
       step,
       caseId: caseData.id,
@@ -680,7 +680,7 @@ export class AIService {
     };
   }
 
-  private buildApplicationAnalysisData(applicationData: ApplicationData): Record<string, any> {
+  private buildApplicationAnalysisData(applicationData: ApplicationData): Record<string, unknown> {
     return {
       applicationType: applicationData.applicationType,
       applicantName: applicationData.applicantName,
@@ -704,7 +704,7 @@ export class AIService {
     };
   }
 
-  private buildFinalSummaryData(caseData: Case): Record<string, any> {
+  private buildFinalSummaryData(caseData: Case): Record<string, unknown> {
     return {
       caseId: caseData.id,
       status: caseData.status,
@@ -716,7 +716,7 @@ export class AIService {
     };
   }
 
-  private buildCompletenessValidationData(caseData: Case): Record<string, any> {
+  private buildCompletenessValidationData(caseData: Case): Record<string, unknown> {
     return {
       caseId: caseData.id,
       status: caseData.status,
@@ -728,7 +728,7 @@ export class AIService {
     };
   }
 
-  private buildMissingFieldsData(applicationData: ApplicationData): Record<string, any> {
+  private buildMissingFieldsData(applicationData: ApplicationData): Record<string, unknown> {
     return {
       applicationType: applicationData.applicationType || 'standard',
       applicantName: applicationData.applicantName || 'unknown',

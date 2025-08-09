@@ -390,8 +390,8 @@ export class CaseService {
   /**
    * Normalize form data by cleaning and standardizing values
    */
-  private normalizeFormData(formData: Record<string, any>): Record<string, any> {
-    const normalized: Record<string, any> = {};
+  private normalizeFormData(formData: Record<string, unknown>): Record<string, unknown> {
+    const normalized: Record<string, unknown> = {};
 
     for (const [key, value] of Object.entries(formData)) {
       if (value !== null && value !== undefined) {
@@ -559,7 +559,7 @@ export class CaseService {
   /**
    * Log activity to audit trail
    */
-  private async logActivity(caseId: string, action: string, details: Record<string, any>, userId: string): Promise<void> {
+  private async logActivity(caseId: string, action: string, details: Record<string, unknown>, userId: string): Promise<void> {
     const activity: ActivityLog = {
       id: randomUUID(),
       caseId,

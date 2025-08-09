@@ -311,7 +311,7 @@ router.get('/:id/notes', validateCaseId, asyncHandler(async (req: Request, res: 
  */
 router.post('/:id/notes', validateCaseId, asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const { id } = req.params;
-  const content = (req.body as any)?.content;
+  const content = (req.body as { content: string })?.content;
   const userId = req.headers['x-user-id'] as string || 'system';
 
   // Validate content
