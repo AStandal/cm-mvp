@@ -29,6 +29,8 @@ export class CaseService {
 
       const caseId = randomUUID();
       const now = new Date();
+      
+
 
       const newCase: Case = {
         id: caseId,
@@ -41,6 +43,8 @@ export class CaseService {
         aiSummaries: [],
         auditTrail: []
       };
+
+
 
       // Save the case to database
       await this.dataService.saveCase(newCase);
@@ -69,6 +73,8 @@ export class CaseService {
 
       const caseId = randomUUID();
       const now = new Date();
+      
+
 
       const newCase: Case = {
         id: caseId,
@@ -81,6 +87,8 @@ export class CaseService {
         aiSummaries: [],
         auditTrail: []
       };
+
+
 
       // Save the case to database
       await this.dataService.saveCase(newCase);

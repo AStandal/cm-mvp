@@ -39,13 +39,16 @@ export class DataService {
         ) VALUES (?, ?, ?, ?, ?, ?, ?)
       `);
 
+            const createdAtISO = caseData.createdAt.toISOString();
+            const updatedAtISO = caseData.updatedAt.toISOString();
+
             const result = stmt.run(
                 caseData.id,
                 JSON.stringify(caseData.applicationData),
                 caseData.status,
                 caseData.currentStep,
-                caseData.createdAt.toISOString(),
-                caseData.updatedAt.toISOString(),
+                createdAtISO,
+                updatedAtISO,
                 caseData.assignedTo || null
             );
 
@@ -179,7 +182,7 @@ export class DataService {
     public async getCasesByStatus(status: CaseStatus): Promise<CaseModel[]> {
         try {
             const stmt = this.getDatabase().prepare(`
-        SELECT * FROM cases WHERE status = ?
+        SELECT * FROM cases WHERE status = ? ORDER BY created_at DESC
       `);
 
             const caseRows = stmt.all(status) as Case[];
@@ -236,8 +239,8 @@ export class DataService {
         try {
             const stmt = this.getDatabase().prepare(`
         INSERT OR REPLACE INTO ai_summaries (
-          id, case_id, type, step, content, version, confidence, generated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+          id, case_id, type, step, content, recommendations, version, confidence, generated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
       `);
 
             const result = stmt.run(
@@ -246,6 +249,7 @@ export class DataService {
                 summary.type,
                 summary.step || null,
                 summary.content,
+                JSON.stringify(summary.recommendations || []),
                 summary.version,
                 summary.confidence || 0.8,
                 summary.generatedAt.toISOString()
@@ -318,8 +322,8 @@ export class DataService {
         try {
             const stmt = this.getDatabase().prepare(`
         INSERT INTO ai_interactions (
-          id, case_id, operation, prompt, response, model, tokens_used, duration, success, timestamp, prompt_template, prompt_version
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          id, case_id, operation, prompt, response, model, tokens_used, cost, duration, success, error, timestamp, step_context, prompt_template, prompt_version
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `);
 
             const result = stmt.run(
@@ -330,9 +334,12 @@ export class DataService {
                 interaction.response,
                 interaction.model,
                 interaction.tokensUsed,
+                interaction.cost || null,
                 interaction.duration,
                 interaction.success ? 1 : 0,
+                interaction.error || null,
                 interaction.timestamp.toISOString(),
+                interaction.stepContext || null,
                 interaction.promptTemplate || null,
                 interaction.promptVersion || null
             );
@@ -388,14 +395,15 @@ export class DataService {
             const stmt = this.getDatabase().prepare(`
         INSERT INTO case_notes (
           id, case_id, content, created_by, created_at
-        ) VALUES (?, ?, ?, ?, datetime('now'))
+        ) VALUES (?, ?, ?, ?, ?)
       `);
 
             const result = stmt.run(
                 randomUUID(),
                 caseId,
                 content,
-                userId
+                userId,
+                new Date().toISOString()
             );
 
             if (result.changes === 0) {
@@ -496,13 +504,16 @@ export class DataService {
         aiSummaries: AISummary[],
         auditTrail: AuditEntry[]
     ): CaseModel {
+        const createdAt = new Date(caseRow.created_at);
+        const updatedAt = new Date(caseRow.updated_at);
+
         return {
             id: caseRow.id,
             applicationData: this.mapDatabaseApplicationDataToModel(JSON.parse(caseRow.application_data)),
             status: caseRow.status,
             currentStep: caseRow.current_step,
-            createdAt: new Date(caseRow.created_at),
-            updatedAt: new Date(caseRow.updated_at),
+            createdAt,
+            updatedAt,
             ...(caseRow.assigned_to && { assignedTo: caseRow.assigned_to }),
             notes: notes.map(note => ({
                 id: note.id,
@@ -526,7 +537,7 @@ export class DataService {
 
 
     private mapDatabaseSummaryToModel(summaryRow: AISummary): AISummaryModel {
-        return {
+        const mappedSummary = {
             id: summaryRow.id,
             caseId: summaryRow.case_id,
             type: summaryRow.type,
@@ -537,10 +548,12 @@ export class DataService {
             generatedAt: new Date(summaryRow.generated_at),
             version: summaryRow.version
         };
+
+        return mappedSummary;
     }
 
     private mapDatabaseInteractionToModel(interactionRow: AIInteraction): AIInteractionModel {
-        return {
+        const mappedInteraction = {
             id: interactionRow.id,
             caseId: interactionRow.case_id,
             operation: interactionRow.operation,
@@ -557,6 +570,8 @@ export class DataService {
             ...(interactionRow.prompt_template && { promptTemplate: interactionRow.prompt_template }),
             ...(interactionRow.prompt_version && { promptVersion: interactionRow.prompt_version })
         };
+
+        return mappedInteraction;
     }
 
     private mapDatabaseApplicationDataToModel(dbAppData: any): import('../types/index.js').ApplicationData {

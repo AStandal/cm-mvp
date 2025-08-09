@@ -176,7 +176,12 @@ describe('CaseService', () => {
 
       expect(updatedCase.status).toBe(CaseStatus.PENDING);
       expect(updatedCase.currentStep).toBe(ProcessStep.ADDITIONAL_INFO_REQUIRED);
-      expect(updatedCase.updatedAt.getTime()).toBeGreaterThan(createdCase.updatedAt.getTime());
+      
+      // Ensure timestamp is properly updated by checking that it's at least 1ms newer
+      // This accounts for potential timing precision issues in tests
+      expect(updatedCase.updatedAt.getTime()).toBeGreaterThanOrEqual(createdCase.updatedAt.getTime());
+      // Additional check to ensure the timestamp was actually updated
+      expect(updatedCase.updatedAt).not.toEqual(createdCase.updatedAt);
     });
 
     it('should validate status transitions', async () => {
@@ -712,12 +717,17 @@ describe('CaseService', () => {
     });
 
     it('should handle database errors gracefully', async () => {
-      // Close database connection to simulate error
-      dbManager.close();
-
+      // Mock the DataService to simulate a database error
+      const originalSaveCase = dataService.saveCase;
+      dataService.saveCase = vi.fn().mockRejectedValue(new Error('Database connection failed'));
+      
       const applicationData = createTestApplicationData();
 
+      // Test that createCase properly handles the database error
       await expect(caseService.createCase(applicationData, 'user123')).rejects.toThrow('Failed to create case');
+      
+      // Restore the original method
+      dataService.saveCase = originalSaveCase;
     });
   });
 
