@@ -266,7 +266,6 @@ export class AIService {
         console.warn('AI service unavailable in development mode, providing fallback data for application analysis');
         
         // Calculate completeness based on form data
-        const formFields = Object.keys(applicationData.formData || {});
         const requiredFields = ['applicantName', 'applicantEmail', 'applicationType', 'caseSummary'];
         const completedFields = requiredFields.filter(field => {
           const value = applicationData[field as keyof ApplicationData] || 

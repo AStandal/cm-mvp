@@ -4,8 +4,9 @@ import fs from 'fs';
 
 export class DatabaseConnection {
   private static instance: DatabaseConnection;
-  private db: Database.Database;
+  private db: Database.Database | null = null;
   private readonly dbPath: string;
+  private isInitialized = false;
 
   private constructor(customPath?: string) {
     // Use custom path for testing or default path for production
@@ -25,7 +26,13 @@ export class DatabaseConnection {
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });
     }
-    
+  }
+
+  private initialize(): void {
+    if (this.isInitialized && this.db) {
+      return;
+    }
+
     // Initialize database connection
     this.db = new Database(this.dbPath);
     
@@ -40,6 +47,7 @@ export class DatabaseConnection {
       this.db.pragma('journal_mode = WAL');
     }
     
+    this.isInitialized = true;
     console.log(`Database connected: ${this.dbPath}`);
   }
 
@@ -67,13 +75,18 @@ export class DatabaseConnection {
   }
 
   public getDatabase(): Database.Database {
-    return this.db;
+    if (!this.isInitialized || !this.db) {
+      this.initialize();
+    }
+    return this.db!;
   }
 
   public close(): void {
-    if (this.db) {
+    if (this.db && this.isInitialized) {
       try {
         this.db.close();
+        this.db = null;
+        this.isInitialized = false;
         console.log('Database connection closed');
       } catch (error) {
         console.warn('Warning: Error closing database:', error);
@@ -87,23 +100,29 @@ export class DatabaseConnection {
 
   // Transaction helper
   public transaction<T>(fn: () => T): T {
-    const transaction = this.db.transaction(fn);
+    const database = this.getDatabase();
+    const transaction = database.transaction(fn);
     return transaction();
   }
 
   // Prepare statement helper
   public prepare(sql: string): Database.Statement {
-    return this.db.prepare(sql);
+    const database = this.getDatabase();
+    return database.prepare(sql);
   }
 
   // Execute SQL helper
   public exec(sql: string): void {
-    this.db.exec(sql);
+    const database = this.getDatabase();
+    database.exec(sql);
   }
 
   // Health check
   public isHealthy(): boolean {
     try {
+      if (!this.isInitialized || !this.db) {
+        return false;
+      }
       const result = this.db.prepare('SELECT 1 as health').get() as { health: number } | undefined;
       return result !== undefined && result.health === 1;
     } catch (error) {

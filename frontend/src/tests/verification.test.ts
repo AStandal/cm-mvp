@@ -141,7 +141,7 @@ describe('Frontend Verification Suite', () => {
 
       // Check for API proxy configuration
       expect(viteConfig).toContain('/api');
-      expect(viteConfig).toContain('localhost:3001');
+      expect(viteConfig).toContain('localhost:3002');
     });
 
     it('should have test configuration', async () => {
