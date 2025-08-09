@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 test('landing page renders and shows key UI', async ({ page }) => {
-  await page.goto('/', { waitUntil: 'networkidle' });
+  await page.goto('/');
 
   // Brand in navbar
   await expect(page.getByText('CaseFlow')).toBeVisible();
