@@ -92,9 +92,11 @@ app.get('/version', (_req: Request, res: Response) => {
 
 // Import routes
 import casesRouter from './routes/cases.js';
+import aiRouter from './routes/ai.js';
 
 // API routes
 app.use('/api/cases', casesRouter);
+app.use('/api/ai', aiRouter);
 
 // Fallback for unimplemented API routes
 app.use('/api', (_req: Request, res: Response) => {
