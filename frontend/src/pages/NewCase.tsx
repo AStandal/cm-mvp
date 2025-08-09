@@ -107,8 +107,8 @@ const NewCase = () => {
     },
     phoneNumber: (value: string) => {
       if (value && value.trim()) {
-        const phoneRegex = /^[\+]?[1-9][\d]{0,15}$/;
-        const cleanPhone = value.replace(/[\s\-\(\)]/g, '');
+        const phoneRegex = /^[+]?[1-9][\d]{0,15}$/;
+        const cleanPhone = value.replace(/[\s\-()]/g, '');
         if (!phoneRegex.test(cleanPhone)) return 'Please enter a valid phone number';
       }
       return '';
