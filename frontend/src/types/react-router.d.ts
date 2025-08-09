@@ -33,4 +33,5 @@ declare module 'react-router-dom' {
   
   export function useParams<T = Record<string, string>>(): T;
   export function useLocation(): any;
+  export function useNavigate(): (to: string, options?: { replace?: boolean; state?: any }) => void;
 }

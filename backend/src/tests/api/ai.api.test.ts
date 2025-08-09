@@ -7,7 +7,7 @@ describe('API Tests - AI Service Endpoints', () => {
   setupDatabaseHooks();
 
   describe('POST /api/ai/analyze-application', () => {
-    it('should return 404 for unimplemented endpoint', async () => {
+    it('should analyze application data successfully', async () => {
       const applicationData = {
         applicantName: 'John Doe',
         applicantEmail: 'john@example.com',
@@ -24,21 +24,36 @@ describe('API Tests - AI Service Endpoints', () => {
       const response = await request(app)
         .post('/api/ai/analyze-application')
         .send({ applicationData })
-        .expect(404);
+        .expect(200);
 
       expect(response.body).toMatchObject({
-        error: 'API endpoints not yet implemented',
-        message: 'This endpoint will be available in future releases'
+        success: true,
+        data: {
+          analysis: expect.objectContaining({
+            summary: expect.any(String),
+            keyPoints: expect.any(Array),
+            potentialIssues: expect.any(Array),
+            recommendedActions: expect.any(Array),
+            priorityLevel: expect.stringMatching(/low|medium|high|urgent/),
+            estimatedProcessingTime: expect.any(String),
+            requiredDocuments: expect.any(Array)
+          })
+        },
+        message: 'Application analysis completed successfully'
       });
     });
 
     it('should handle JSON request body', async () => {
-      const applicationData = { applicantName: 'Test User' };
+      const applicationData = { 
+        applicantName: 'Test User',
+        applicantEmail: 'test@example.com',
+        applicationType: 'standard'
+      };
 
       const response = await request(app)
         .post('/api/ai/analyze-application')
         .send({ applicationData })
-        .expect(404);
+        .expect(200);
 
       expect(response.headers['content-type']).toMatch(/application\/json/);
     });
@@ -54,18 +69,24 @@ describe('API Tests - AI Service Endpoints', () => {
     });
 
     it('should include CORS headers', async () => {
+      const applicationData = {
+        applicantName: 'Test User',
+        applicantEmail: 'test@example.com',
+        applicationType: 'standard'
+      };
+
       const response = await request(app)
         .post('/api/ai/analyze-application')
         .set('Origin', 'http://localhost:3000')
-        .send({ applicationData: {} })
-        .expect(404);
+        .send({ applicationData })
+        .expect(200);
 
       expect(response.headers).toHaveProperty('access-control-allow-origin');
     });
   });
 
   describe('POST /api/ai/validate-completeness', () => {
-    it('should return 404 for unimplemented endpoint', async () => {
+    it('should validate case completeness successfully', async () => {
       const caseData = {
         id: 'test-case-123',
         status: 'active',
@@ -81,11 +102,20 @@ describe('API Tests - AI Service Endpoints', () => {
       const response = await request(app)
         .post('/api/ai/validate-completeness')
         .send({ caseData })
-        .expect(404);
+        .expect(200);
 
       expect(response.body).toMatchObject({
-        error: 'API endpoints not yet implemented',
-        message: 'This endpoint will be available in future releases'
+        success: true,
+        data: {
+          validation: expect.objectContaining({
+            isComplete: expect.any(Boolean),
+            missingSteps: expect.any(Array),
+            missingDocuments: expect.any(Array),
+            recommendations: expect.any(Array),
+            confidence: expect.any(Number)
+          })
+        },
+        message: 'Case completeness validation completed successfully'
       });
     });
 

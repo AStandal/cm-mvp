@@ -20,8 +20,22 @@ export const caseService = {
 
   // Create a new case
   createCase: async (applicationData: ApplicationData): Promise<Case> => {
-    const response = await api.post('/cases', { applicationData });
-    return response.data.data.case;
+    try {
+      const response = await api.post('/cases', { applicationData });
+      
+      // Handle the response structure from backend
+      if (response.data && response.data.success && response.data.data && response.data.data.case) {
+        return response.data.data.case;
+      } else {
+        throw new Error('Invalid response structure from server');
+      }
+    } catch (error: any) {
+      // Enhanced error handling
+      if (error.response?.data?.error) {
+        throw new Error(error.response.data.error.message || 'Failed to create case');
+      }
+      throw error;
+    }
   },
 
   // Update case status
@@ -58,5 +72,37 @@ export const caseService = {
   getAuditTrail: async (id: string): Promise<any[]> => {
     const response = await api.get(`/cases/${id}/audit`);
     return response.data.data;
+  },
+
+  // Analyze application data
+  analyzeApplication: async (applicationData: ApplicationData): Promise<any> => {
+    try {
+      const response = await api.post('/ai/analyze-application', { applicationData });
+      
+      // Handle the response structure from backend
+      if (response.data && response.data.success && response.data.data && response.data.data.analysis) {
+        return response.data.data.analysis;
+      } else {
+        throw new Error('Invalid response structure from AI analysis');
+      }
+    } catch (error: any) {
+      // Enhanced error handling for AI analysis
+      if (error.response?.data?.error) {
+        throw new Error(error.response.data.error.message || 'Failed to analyze application');
+      }
+      throw error;
+    }
+  },
+
+  // Detect missing fields in application data
+  detectMissingFields: async (applicationData: ApplicationData): Promise<any> => {
+    const response = await api.post('/ai/detect-missing-fields', { applicationData });
+    return response.data.data.missingFieldsAnalysis;
+  },
+
+  // Validate case completeness
+  validateCaseCompleteness: async (caseData: any): Promise<any> => {
+    const response = await api.post('/ai/validate-completeness', { caseData });
+    return response.data.data.validation;
   },
 };
