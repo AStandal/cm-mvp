@@ -13,7 +13,8 @@
     "lint:all": "cd backend && npm run lint && cd ../frontend && npm run lint",
     "dev:backend": "cd backend && npm run dev",
     "dev:frontend": "cd frontend && npm run dev",
-    "ci:hello": "bash scripts/hello.sh"
+    "ci:hello": "bash scripts/hello.sh",
+    "mcp:playwright": "npm --workspace mcp/playwright-mcp run build && node mcp/playwright-mcp/dist/index.js"
   },
   "keywords": [
     "ai",
@@ -26,7 +27,8 @@
   "author": "AI Case Management Team",
   "workspaces": [
     "backend",
-    "frontend"
+    "frontend",
+    "mcp/playwright-mcp"
   ],
   "engines": {
     "node": ">=18.0.0",
