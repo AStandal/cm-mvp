@@ -460,7 +460,7 @@ export class DataService {
     /**
      * Save case notes (private method)
      */
-    private saveCaseNotes(caseId: string, notes: any[]): void {
+    private saveCaseNotes(caseId: string, notes: Array<{ id?: string; content: string; createdBy?: string; createdAt?: Date }>): void {
         const stmt = this.getDatabase().prepare(`
         INSERT OR REPLACE INTO case_notes (
           id, case_id, content, created_by, created_at
@@ -574,21 +574,21 @@ export class DataService {
         return mappedInteraction;
     }
 
-    private mapDatabaseApplicationDataToModel(dbAppData: any): import('../types/index.js').ApplicationData {
+    private mapDatabaseApplicationDataToModel(dbAppData: Record<string, unknown>): import('../types/index.js').ApplicationData {
         return {
-            applicantName: dbAppData.applicantName,
-            applicantEmail: dbAppData.applicantEmail,
-            applicationType: dbAppData.applicationType,
-            submissionDate: new Date(dbAppData.submissionDate),
-            documents: dbAppData.documents?.map((doc: any) => ({
-                id: doc.id,
-                filename: doc.filename,
-                path: doc.path,
-                size: doc.size,
-                mimeType: doc.mimeType,
-                uploadedAt: new Date(doc.uploadedAt)
+            applicantName: dbAppData.applicantName as string,
+            applicantEmail: dbAppData.applicantEmail as string,
+            applicationType: dbAppData.applicationType as string,
+            submissionDate: new Date(dbAppData.submissionDate as string),
+            documents: (dbAppData.documents as Array<Record<string, unknown>>)?.map((doc: Record<string, unknown>) => ({
+                id: doc.id as string,
+                filename: doc.filename as string,
+                path: doc.path as string,
+                size: doc.size as number,
+                mimeType: doc.mimeType as string,
+                uploadedAt: new Date(doc.uploadedAt as string)
             })) || [],
-            formData: dbAppData.formData || {}
+            formData: dbAppData.formData as Record<string, unknown> || {}
         };
     }
 }

@@ -183,9 +183,9 @@ export class DatabaseSchema {
         }
     }
 
-    public getTableInfo(tableName: string): any[] {
+    public getTableInfo(tableName: string): Array<{ cid: number; name: string; type: string; notnull: number; dflt_value: string | null; pk: number }> {
         const stmt = this.db.prepare(`PRAGMA table_info(${tableName})`);
-        return stmt.all();
+        return stmt.all() as Array<{ cid: number; name: string; type: string; notnull: number; dflt_value: string | null; pk: number }>;
     }
 
     public listTables(): string[] {

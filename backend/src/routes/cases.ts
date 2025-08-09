@@ -1,6 +1,6 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
-import { ApplicationData, ErrorResponse } from '../types/index.js';
+import { ApplicationData, ErrorResponse, CaseDocument } from '../types/index.js';
 import { randomUUID } from 'crypto';
 import { getServices } from './serviceFactory.js';
 
@@ -9,7 +9,7 @@ const router = Router();
 // Test-only in-memory notes store to support API tests without full persistence
 const isTestEnv = process.env.NODE_ENV === 'test';
 const testNotesStore: Map<string, Array<{ id: string; caseId: string; content: string; createdBy: string; createdAt: string }>> = new Map();
-const testCasesStore: Map<string, { applicantName: string; applicantEmail: string; applicationType: string; submissionDate?: Date; documents?: any[]; formData?: Record<string, any> }> = new Map();
+const testCasesStore: Map<string, { applicantName: string; applicantEmail: string; applicationType: string; submissionDate?: Date; documents?: CaseDocument[]; formData?: Record<string, unknown> }> = new Map();
 
 
 // Validation schemas
@@ -105,7 +105,7 @@ router.post('/', validateInput(createCaseSchema), asyncHandler(async (req: Reque
       submissionDate: applicationData.submissionDate 
         ? new Date(applicationData.submissionDate)
         : new Date(),
-      documents: applicationData.documents?.map((doc: any) => ({
+      documents: applicationData.documents?.map((doc: CaseDocument) => ({
         ...doc,
         uploadedAt: new Date(doc.uploadedAt)
       })) || []

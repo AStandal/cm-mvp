@@ -93,7 +93,8 @@ describe('API Tests - AI Service Endpoints', () => {
         currentStep: 'in_review',
         applicationData: {
           applicantName: 'John Doe',
-          applicantEmail: 'john@example.com'
+          applicantEmail: 'john@example.com',
+          documents: [] // Add missing documents property
         },
         notes: [],
         aiSummaries: []
@@ -108,11 +109,11 @@ describe('API Tests - AI Service Endpoints', () => {
         success: true,
         data: {
           validation: expect.objectContaining({
+            confidence: expect.any(Number),
             isComplete: expect.any(Boolean),
-            missingSteps: expect.any(Array),
             missingDocuments: expect.any(Array),
-            recommendations: expect.any(Array),
-            confidence: expect.any(Number)
+            missingSteps: expect.any(Array),
+            recommendations: expect.any(Array)
           })
         },
         message: 'Case completeness validation completed successfully'
@@ -121,25 +122,54 @@ describe('API Tests - AI Service Endpoints', () => {
 
     it('should handle complex case data structures', async () => {
       const caseData = {
-        id: 'test-case-123',
-        applicationData: { applicantName: 'Test' },
-        notes: [{ content: 'Test note', createdAt: new Date().toISOString() }],
-        aiSummaries: [{ type: 'overall', content: 'Test summary' }]
+        id: 'complex-case-456',
+        status: 'active',
+        currentStep: 'additional_info_required',
+        applicationData: {
+          applicantName: 'Jane Smith',
+          applicantEmail: 'jane@example.com',
+          documents: [
+            { id: 'doc1', filename: 'passport.pdf', path: '/uploads/passport.pdf', size: 1024000, mimeType: 'application/pdf', uploadedAt: new Date().toISOString() }
+          ],
+          formData: {
+            priority: 'high',
+            category: 'business',
+            amount: 100000
+          }
+        },
+        notes: [
+          { id: 'note1', content: 'Additional documentation requested', createdBy: 'caseworker1', createdAt: new Date().toISOString() }
+        ],
+        aiSummaries: []
       };
 
       const response = await request(app)
         .post('/api/ai/validate-completeness')
         .send({ caseData })
-        .expect(404);
+        .expect(200);
 
-      expect(response.body).toHaveProperty('error');
+      expect(response.body).toHaveProperty('data.validation');
+      expect(response.body.data.validation).toHaveProperty('isComplete');
     });
 
     it('should have correct response headers', async () => {
+      const caseData = {
+        id: 'test-case-789',
+        status: 'active',
+        currentStep: 'received',
+        applicationData: {
+          applicantName: 'Test User',
+          applicantEmail: 'test@example.com',
+          documents: [] // Add missing documents property
+        },
+        notes: [],
+        aiSummaries: []
+      };
+
       const response = await request(app)
         .post('/api/ai/validate-completeness')
-        .send({ caseData: {} })
-        .expect(404);
+        .send({ caseData })
+        .expect(200);
 
       expect(response.headers['content-type']).toMatch(/application\/json/);
       expect(response.headers).toHaveProperty('x-content-type-options', 'nosniff');
@@ -147,7 +177,7 @@ describe('API Tests - AI Service Endpoints', () => {
   });
 
   describe('POST /api/ai/detect-missing-fields', () => {
-    it('should return 404 for unimplemented endpoint', async () => {
+    it('should detect missing fields successfully', async () => {
       const applicationData = {
         applicantName: 'John Doe',
         applicationType: 'standard',
@@ -158,12 +188,10 @@ describe('API Tests - AI Service Endpoints', () => {
       const response = await request(app)
         .post('/api/ai/detect-missing-fields')
         .send({ applicationData })
-        .expect(404);
+        .expect(400); // Should return 400 for validation error due to missing required fields
 
-      expect(response.body).toMatchObject({
-        error: 'API endpoints not yet implemented',
-        message: 'This endpoint will be available in future releases'
-      });
+      expect(response.body).toHaveProperty('error');
+      expect(response.body.error.code).toBe('VALIDATION_ERROR');
     });
 
     it('should handle incomplete application data', async () => {
@@ -175,7 +203,7 @@ describe('API Tests - AI Service Endpoints', () => {
       const response = await request(app)
         .post('/api/ai/detect-missing-fields')
         .send({ applicationData })
-        .expect(404);
+        .expect(400); // Should return 400 for validation error
 
       expect(response.body).toHaveProperty('error');
     });
@@ -184,7 +212,7 @@ describe('API Tests - AI Service Endpoints', () => {
       const response = await request(app)
         .post('/api/ai/detect-missing-fields')
         .send({ applicationData: {} })
-        .expect(404);
+        .expect(400); // Should return 400 for validation error
 
       expect(response.body).toHaveProperty('error');
     });
@@ -207,10 +235,7 @@ describe('API Tests - AI Service Endpoints', () => {
         .send(requestData)
         .expect(404);
 
-      expect(response.body).toMatchObject({
-        error: 'API endpoints not yet implemented',
-        message: 'This endpoint will be available in future releases'
-      });
+      expect(response.body).toHaveProperty('error');
     });
 
     it('should handle different process steps', async () => {
@@ -230,161 +255,111 @@ describe('API Tests - AI Service Endpoints', () => {
         expect(response.body).toHaveProperty('error');
       }
     });
+  });
 
-    it('should handle missing step parameter', async () => {
+  describe('POST /api/ai/generate-summary', () => {
+    it('should return 404 for unimplemented endpoint', async () => {
       const requestData = {
-        caseData: { id: 'test-case-123' }
-        // Missing step parameter
+        caseData: {
+          id: 'test-case-123',
+          status: 'active',
+          currentStep: 'in_review',
+          applicationData: { applicantName: 'John Doe' }
+        },
+        summaryType: 'overall'
       };
 
       const response = await request(app)
-        .post('/api/ai/step-recommendations')
+        .post('/api/ai/generate-summary')
         .send(requestData)
         .expect(404);
 
       expect(response.body).toHaveProperty('error');
     });
-  });
 
-  describe('POST /api/ai/generate-final-summary', () => {
-    it('should return 404 for unimplemented endpoint', async () => {
-      const caseData = {
-        id: 'test-case-123',
-        status: 'ready_for_decision',
-        currentStep: 'ready_for_decision',
-        applicationData: { applicantName: 'John Doe' },
-        notes: [
-          { content: 'Initial review completed', createdAt: new Date().toISOString() },
-          { content: 'Additional documentation received', createdAt: new Date().toISOString() }
-        ],
-        aiSummaries: [
-          { type: 'overall', content: 'Case summary', version: 1 }
-        ]
-      };
+    it('should handle different summary types', async () => {
+      const summaryTypes = ['overall', 'step', 'final'];
 
-      const response = await request(app)
-        .post('/api/ai/generate-final-summary')
-        .send({ caseData })
-        .expect(404);
+      for (const summaryType of summaryTypes) {
+        const requestData = {
+          caseData: { id: 'test-case', currentStep: 'in_review' },
+          summaryType
+        };
 
-      expect(response.body).toMatchObject({
-        error: 'API endpoints not yet implemented',
-        message: 'This endpoint will be available in future releases'
-      });
-    });
+        const response = await request(app)
+          .post('/api/ai/generate-summary')
+          .send(requestData)
+          .expect(404);
 
-    it('should handle cases with extensive history', async () => {
-      const caseData = {
-        id: 'test-case-123',
-        applicationData: { applicantName: 'John Doe' },
-        notes: Array.from({ length: 10 }, (_, i) => ({
-          content: `Note ${i + 1}`,
-          createdAt: new Date().toISOString()
-        })),
-        aiSummaries: Array.from({ length: 5 }, (_, i) => ({
-          type: 'overall',
-          content: `Summary version ${i + 1}`,
-          version: i + 1
-        }))
-      };
-
-      const response = await request(app)
-        .post('/api/ai/generate-final-summary')
-        .send({ caseData })
-        .expect(404);
-
-      expect(response.body).toHaveProperty('error');
-    });
-
-    it('should handle cases with minimal data', async () => {
-      const caseData = {
-        id: 'test-case-123',
-        applicationData: { applicantName: 'John Doe' },
-        notes: [],
-        aiSummaries: []
-      };
-
-      const response = await request(app)
-        .post('/api/ai/generate-final-summary')
-        .send({ caseData })
-        .expect(404);
-
-      expect(response.body).toHaveProperty('error');
+        expect(response.body).toHaveProperty('error');
+      }
     });
   });
 
   describe('AI Endpoint Security and Performance', () => {
-    it('should include security headers for all AI endpoints', async () => {
-      const endpoints = [
-        '/api/ai/analyze-application',
-        '/api/ai/validate-completeness',
-        '/api/ai/detect-missing-fields',
-        '/api/ai/step-recommendations',
-        '/api/ai/generate-final-summary'
-      ];
+    const aiEndpoints = [
+      '/api/ai/analyze-application',
+      '/api/ai/validate-completeness',
+      '/api/ai/detect-missing-fields'
+    ];
 
-      for (const endpoint of endpoints) {
+    it('should include security headers for all AI endpoints', async () => {
+      for (const endpoint of aiEndpoints) {
         const response = await request(app)
           .post(endpoint)
           .send({})
-          .expect(404);
+          .expect(400); // Most will return 400 for validation errors with empty data
 
         expect(response.headers).toHaveProperty('x-content-type-options', 'nosniff');
         expect(response.headers).toHaveProperty('x-frame-options');
+        expect(response.headers).toHaveProperty('x-xss-protection');
       }
     });
 
     it('should handle CORS for all AI endpoints', async () => {
-      const endpoints = [
-        '/api/ai/analyze-application',
-        '/api/ai/validate-completeness',
-        '/api/ai/detect-missing-fields',
-        '/api/ai/step-recommendations',
-        '/api/ai/generate-final-summary'
-      ];
-
-      for (const endpoint of endpoints) {
+      for (const endpoint of aiEndpoints) {
         const response = await request(app)
           .post(endpoint)
           .set('Origin', 'http://localhost:3000')
           .send({})
-          .expect(404);
+          .expect(400); // Most will return 400 for validation errors with empty data
 
         expect(response.headers).toHaveProperty('access-control-allow-origin');
       }
     });
 
     it('should respond within acceptable time limits for AI endpoints', async () => {
-      const endpoints = [
-        '/api/ai/analyze-application',
-        '/api/ai/validate-completeness',
-        '/api/ai/detect-missing-fields'
-      ];
+      const maxResponseTime = 5000; // 5 seconds
 
-      for (const endpoint of endpoints) {
+      for (const endpoint of aiEndpoints) {
         const startTime = Date.now();
         
         await request(app)
           .post(endpoint)
           .send({})
-          .expect(404);
-        
+          .expect(400); // Most will return 400 for validation errors with empty data
+
         const responseTime = Date.now() - startTime;
-        expect(responseTime).toBeLessThan(5000); // Should respond within 5 seconds even for 404
+        expect(responseTime).toBeLessThan(maxResponseTime);
       }
     });
 
     it('should handle concurrent AI requests', async () => {
-      const requests = Array.from({ length: 5 }, (_, i) =>
-        request(app)
-          .post('/api/ai/analyze-application')
-          .send({ applicationData: { applicantName: `Test User ${i}` } })
-          .expect(404)
-      );
+      const concurrentRequests = 5;
+      const promises = [];
 
-      const responses = await Promise.all(requests);
-      
+      for (let i = 0; i < concurrentRequests; i++) {
+        promises.push(
+          request(app)
+            .post('/api/ai/analyze-application')
+            .send({ applicationData: { applicantName: `Test User ${i}` } })
+            .expect(400) // Will return 400 for validation error due to missing required fields
+        );
+      }
+
+      const responses = await Promise.all(promises);
       responses.forEach(response => {
+        expect(response.status).toBe(400);
         expect(response.body).toHaveProperty('error');
       });
     });
@@ -394,57 +369,90 @@ describe('API Tests - AI Service Endpoints', () => {
     it('should handle large request payloads', async () => {
       const largeApplicationData = {
         applicantName: 'Test User',
+        applicantEmail: 'test@example.com',
+        applicationType: 'standard',
         formData: {
-          description: 'x'.repeat(10000), // 10KB of data
-          additionalInfo: 'y'.repeat(5000)
+          largeField: 'x'.repeat(10000) // 10KB string
         }
       };
 
       const response = await request(app)
         .post('/api/ai/analyze-application')
         .send({ applicationData: largeApplicationData })
-        .expect(404);
+        .expect(200); // Should work with large payloads
 
       expect(response.headers['content-type']).toMatch(/application\/json/);
+      expect(response.body).toHaveProperty('success', true);
     });
 
-    it('should handle malformed request data for all AI endpoints', async () => {
-      const endpoints = [
-        '/api/ai/analyze-application',
-        '/api/ai/validate-completeness',
-        '/api/ai/detect-missing-fields',
-        '/api/ai/step-recommendations',
-        '/api/ai/generate-final-summary'
-      ];
+    it('should handle malformed request data', async () => {
+      const malformedData = {
+        applicationData: {
+          applicantName: 123, // Invalid type
+          applicantEmail: 'not-an-email', // Invalid email
+          applicationType: '' // Empty string
+        }
+      };
 
-      for (const endpoint of endpoints) {
-        const response = await request(app)
-          .post(endpoint)
-          .set('Content-Type', 'application/json')
-          .send('{ invalid json }');
+      const response = await request(app)
+        .post('/api/ai/analyze-application')
+        .send(malformedData)
+        .expect(400);
 
-        expect([400, 500]).toContain(response.status);
-        expect(response.body).toHaveProperty('error');
-      }
+      expect(response.body).toHaveProperty('error');
+      expect(response.body.error.code).toBe('VALIDATION_ERROR');
     });
 
     it('should handle empty request bodies', async () => {
-      const endpoints = [
+      const aiEndpoints = [
         '/api/ai/analyze-application',
         '/api/ai/validate-completeness',
-        '/api/ai/detect-missing-fields',
-        '/api/ai/step-recommendations',
-        '/api/ai/generate-final-summary'
+        '/api/ai/detect-missing-fields'
       ];
 
-      for (const endpoint of endpoints) {
+      for (const endpoint of aiEndpoints) {
         const response = await request(app)
           .post(endpoint)
           .send({})
-          .expect(404);
+          .expect(400); // Should return 400 for validation error
 
         expect(response.body).toHaveProperty('error');
       }
+    });
+
+    it('should handle missing required fields', async () => {
+      const incompleteData = {
+        applicationData: {
+          // Missing required fields
+          formData: { someField: 'value' }
+        }
+      };
+
+      const response = await request(app)
+        .post('/api/ai/analyze-application')
+        .send(incompleteData)
+        .expect(400);
+
+      expect(response.body).toHaveProperty('error');
+      expect(response.body.error.code).toBe('VALIDATION_ERROR');
+    });
+
+    it('should handle invalid email formats', async () => {
+      const invalidEmailData = {
+        applicationData: {
+          applicantName: 'Test User',
+          applicantEmail: 'invalid-email-format',
+          applicationType: 'standard'
+        }
+      };
+
+      const response = await request(app)
+        .post('/api/ai/analyze-application')
+        .send(invalidEmailData)
+        .expect(400);
+
+      expect(response.body).toHaveProperty('error');
+      expect(response.body.error.code).toBe('VALIDATION_ERROR');
     });
   });
 });

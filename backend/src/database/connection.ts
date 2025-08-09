@@ -3,7 +3,7 @@ import path from 'path';
 import fs from 'fs';
 
 export class DatabaseConnection {
-  private static instance: DatabaseConnection;
+  private static instance: DatabaseConnection | null = null;
   private db: Database.Database | null = null;
   private readonly dbPath: string;
   private isInitialized = false;
@@ -70,7 +70,7 @@ export class DatabaseConnection {
   public static resetInstance(): void {
     if (DatabaseConnection.instance) {
       DatabaseConnection.instance.close();
-      DatabaseConnection.instance = null as any;
+      DatabaseConnection.instance = null;
     }
   }
 

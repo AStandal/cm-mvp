@@ -1,10 +1,16 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
-import { ApplicationData, ErrorResponse } from '../types/index.js';
+import { ApplicationData, ErrorResponse, CaseDocument } from '../types/index.js';
 import { randomUUID } from 'crypto';
 import { getServices } from './serviceFactory.js';
 
 const router = Router();
+
+// Diagnostic logging middleware
+const logRequest = (req: Request, _res: Response, next: NextFunction): void => {
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
+  next();
+};
 
 // Validation schemas
 const applicationDataSchema = z.object({
@@ -25,6 +31,25 @@ const applicationDataSchema = z.object({
 
 const analyzeApplicationSchema = z.object({
   applicationData: applicationDataSchema
+});
+
+// Case data validation schema
+const caseDataSchema = z.object({
+  id: z.string().min(1, 'Case ID is required'),
+  status: z.string().min(1, 'Status is required'),
+  currentStep: z.string().min(1, 'Current step is required'),
+  applicationData: z.object({
+    applicantName: z.string().min(1, 'Applicant name is required'),
+    applicantEmail: z.string().email('Invalid email format'),
+    documents: z.array(z.any()).optional().default([]),
+    formData: z.record(z.string(), z.any()).optional()
+  }),
+  notes: z.array(z.any()).optional().default([]),
+  aiSummaries: z.array(z.any()).optional().default([])
+});
+
+const validateCompletenessSchema = z.object({
+  caseData: caseDataSchema
 });
 
 // Middleware for input validation
@@ -65,7 +90,7 @@ const asyncHandler = (fn: (req: Request, res: Response, next: NextFunction) => P
  * Analyze application data and provide AI insights
  * Requirements: 1.3, 1.4, 1.5
  */
-router.post('/analyze-application', validateInput(analyzeApplicationSchema), asyncHandler(async (req: Request, res: Response): Promise<void> => {
+router.post('/analyze-application', logRequest, validateInput(analyzeApplicationSchema), asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const { applicationData } = req.body;
 
   try {
@@ -75,7 +100,7 @@ router.post('/analyze-application', validateInput(analyzeApplicationSchema), asy
       submissionDate: applicationData.submissionDate 
         ? new Date(applicationData.submissionDate)
         : new Date(),
-      documents: applicationData.documents?.map((doc: any) => ({
+      documents: applicationData.documents?.map((doc: CaseDocument) => ({
         ...doc,
         uploadedAt: new Date(doc.uploadedAt)
       })) || []
@@ -87,14 +112,16 @@ router.post('/analyze-application', validateInput(analyzeApplicationSchema), asy
     const analysis = await aiService.analyzeApplication(processedApplicationData);
 
     // Return the analysis with 200 status
-    res.status(200).json({
+    const response = {
       success: true,
       data: {
         analysis
       },
       message: 'Application analysis completed successfully',
       timestamp: new Date().toISOString()
-    });
+    };
+    console.log(`[AI ROUTE DEBUG] /analyze-application response:`, JSON.stringify(response, null, 2));
+    res.status(200).json(response);
 
   } catch (error) {
     const errorResponse: ErrorResponse = {
@@ -118,7 +145,7 @@ router.post('/analyze-application', validateInput(analyzeApplicationSchema), asy
  * Validate if a case is complete and ready for conclusion
  * Requirements: 3.3
  */
-router.post('/validate-completeness', asyncHandler(async (req: Request, res: Response): Promise<void> => {
+router.post('/validate-completeness', logRequest, validateInput(validateCompletenessSchema), asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const { caseData } = req.body;
 
   try {
@@ -148,7 +175,11 @@ router.post('/validate-completeness', asyncHandler(async (req: Request, res: Res
       requestId: randomUUID()
     };
 
-    res.status(500).json(errorResponse);
+    // Determine appropriate status code based on error type
+    const statusCode = error instanceof Error && 
+      (error.message.includes('validation') || error.message.includes('Invalid') || error.message.includes('Failed to validate')) 
+      ? 400 : 500;
+    res.status(statusCode).json(errorResponse);
   }
 }));
 
@@ -157,7 +188,7 @@ router.post('/validate-completeness', asyncHandler(async (req: Request, res: Res
  * Detect missing fields in application data
  * Requirements: 1.5
  */
-router.post('/detect-missing-fields', validateInput(analyzeApplicationSchema), asyncHandler(async (req: Request, res: Response): Promise<void> => {
+router.post('/detect-missing-fields', logRequest, validateInput(analyzeApplicationSchema), asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const { applicationData } = req.body;
 
   try {
@@ -167,7 +198,7 @@ router.post('/detect-missing-fields', validateInput(analyzeApplicationSchema), a
       submissionDate: applicationData.submissionDate 
         ? new Date(applicationData.submissionDate)
         : new Date(),
-      documents: applicationData.documents?.map((doc: any) => ({
+      documents: applicationData.documents?.map((doc: CaseDocument) => ({
         ...doc,
         uploadedAt: new Date(doc.uploadedAt)
       })) || []
@@ -199,7 +230,11 @@ router.post('/detect-missing-fields', validateInput(analyzeApplicationSchema), a
       requestId: randomUUID()
     };
 
-    res.status(500).json(errorResponse);
+    // Determine appropriate status code based on error type
+    const statusCode = error instanceof Error && 
+      (error.message.includes('validation') || error.message.includes('Invalid') || error.message.includes('Failed to detect')) 
+      ? 400 : 500;
+    res.status(statusCode).json(errorResponse);
   }
 }));
 

@@ -113,12 +113,123 @@ vi.mock('../../routes/serviceFactory.js', () => {
   };
 
   const mockAIService = {
-    generateOverallSummary: vi.fn().mockResolvedValue({}),
-    generateStepRecommendation: vi.fn().mockResolvedValue({}),
-    analyzeApplication: vi.fn().mockResolvedValue({}),
-    generateFinalSummary: vi.fn().mockResolvedValue({}),
-    validateCaseCompleteness: vi.fn().mockResolvedValue({}),
-    detectMissingFields: vi.fn().mockResolvedValue({}),
+    generateOverallSummary: vi.fn().mockResolvedValue({
+      id: 'mock-summary-123',
+      caseId: 'test-case-123',
+      type: 'overall',
+      step: null,
+      content: 'This is a development fallback AI summary for case test-case-123. The application appears to be a standard application submitted by John Doe. The case is currently in received status.',
+      recommendations: ['Review application completeness', 'Verify applicant information', 'Check required documentation', 'Schedule follow-up if needed'],
+      confidence: 0.75,
+      generatedAt: new Date(),
+      version: 1
+    }),
+    generateStepRecommendation: vi.fn().mockResolvedValue({
+      id: 'mock-recommendation-123',
+      caseId: 'test-case-123',
+      step: 'received',
+      recommendations: ['Review current step requirements', 'Ensure all documentation is complete', 'Verify applicant information accuracy', 'Prepare for next processing phase'],
+      priority: 'medium',
+      confidence: 0.8,
+      generatedAt: new Date(),
+      version: 1
+    }),
+    analyzeApplication: vi.fn().mockResolvedValue({
+      id: 'mock-analysis-123',
+      summary: 'Development fallback analysis for standard application submitted by John Doe. Application appears to be 100% complete.',
+      keyPoints: [
+        'Application type: standard',
+        'Applicant: John Doe',
+        'Email: john@example.com',
+        'Documents uploaded: 0',
+        'Form fields completed: 4/4'
+      ],
+      potentialIssues: [],
+      recommendedActions: [
+        'Review all form fields for completeness',
+        'Ensure all required documents are uploaded',
+        'Verify contact information accuracy',
+        'Complete any missing required fields'
+      ],
+      priorityLevel: 'low',
+      estimatedProcessingTime: '2-3 business days for initial review',
+      requiredDocuments: ['Passport', 'Birth certificate', 'Proof of residence', 'Financial documents'],
+      generatedAt: new Date(),
+      version: 1
+    }),
+    generateFinalSummary: vi.fn().mockResolvedValue({
+      id: 'mock-final-summary-123',
+      overallSummary: 'Development fallback summary for case test-case-123. This is a standard application that has been processed through the system.',
+      keyDecisions: [
+        'Application received and processed',
+        'Initial review completed',
+        'Documentation verified'
+      ],
+      outcomes: [
+        'Case moved to next processing step',
+        'Required actions identified',
+        'Timeline established'
+      ],
+      processHistory: [
+        'Application submitted',
+        'Initial review completed',
+        'Documentation collected'
+      ],
+      recommendedDecision: 'requires_additional_info',
+      supportingRationale: [
+        'Application meets basic requirements',
+        'Additional documentation may be needed',
+        'Further review recommended'
+      ],
+      generatedAt: new Date(),
+      version: 1
+    }),
+    validateCaseCompleteness: vi.fn().mockResolvedValue({
+      id: 'mock-completeness-123',
+      isComplete: true,
+      missingSteps: [],
+      missingDocuments: [],
+      recommendations: [
+        'Case appears to be complete',
+        'All required steps have been completed',
+        'Ready for final review'
+      ],
+      confidence: 0.9,
+      generatedAt: new Date(),
+      version: 1
+    }),
+    detectMissingFields: vi.fn().mockResolvedValue({
+      id: 'mock-missing-fields-123',
+      missingFields: [
+        {
+          fieldName: 'applicantName',
+          fieldType: 'string',
+          importance: 'required',
+          suggestedAction: 'Enter the applicant\'s full legal name'
+        },
+        {
+          fieldName: 'applicantEmail',
+          fieldType: 'email',
+          importance: 'required',
+          suggestedAction: 'Provide a valid email address for communication'
+        },
+        {
+          fieldName: 'phoneNumber',
+          fieldType: 'phone',
+          importance: 'recommended',
+          suggestedAction: 'Add phone number for urgent contact needs'
+        }
+      ],
+      completenessScore: 0.6,
+      priorityActions: [
+        'Complete required applicant information',
+        'Upload identification documents',
+        'Provide contact details'
+      ],
+      estimatedCompletionTime: '2-3 business days',
+      generatedAt: new Date(),
+      version: 1
+    }),
     generateSummary: vi.fn().mockResolvedValue('Mock summary'),
     validateCompleteness: vi.fn().mockResolvedValue({ complete: true, missing: [] }),
     recommendNextSteps: vi.fn().mockResolvedValue([])
