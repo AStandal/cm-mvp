@@ -258,6 +258,53 @@ export class AIService {
         promptVersion: '1.0'
       });
 
+      // In development mode, provide fallback data if AI service is unavailable
+      if (process.env.NODE_ENV === 'development' && error instanceof Error && 
+          (error.message.includes('401') || error.message.includes('OpenRouter API failed') || 
+           error.message.includes('Failed to analyze application'))) {
+        
+        console.warn('AI service unavailable in development mode, providing fallback data for application analysis');
+        
+        // Calculate completeness based on form data
+        const formFields = Object.keys(applicationData.formData || {});
+        const requiredFields = ['applicantName', 'applicantEmail', 'applicationType', 'caseSummary'];
+        const completedFields = requiredFields.filter(field => {
+          const value = applicationData[field as keyof ApplicationData] || 
+                       (applicationData.formData && applicationData.formData[field]);
+          return typeof value === 'string' ? value.trim() !== '' : Array.isArray(value) ? value.length > 0 : false;
+        });
+        
+        const completeness = Math.round((completedFields.length / requiredFields.length) * 100);
+        
+        // Generate fallback analysis
+        const fallbackAnalysis = this.createApplicationAnalysis({
+          summary: `Development fallback analysis for ${applicationData.applicationType} application submitted by ${applicationData.applicantName}. Application appears to be ${completeness}% complete.`,
+          keyPoints: [
+            `Application type: ${applicationData.applicationType}`,
+            `Applicant: ${applicationData.applicantName}`,
+            `Email: ${applicationData.applicantEmail}`,
+            `Documents uploaded: ${applicationData.documents.length}`,
+            `Form fields completed: ${completedFields.length}/${requiredFields.length}`
+          ],
+          potentialIssues: completeness < 80 ? [
+            'Some required fields may be missing',
+            'Document uploads may be incomplete',
+            'Additional information may be needed'
+          ] : [],
+          recommendedActions: [
+            'Review all form fields for completeness',
+            'Ensure all required documents are uploaded',
+            'Verify contact information accuracy',
+            'Complete any missing required fields'
+          ],
+          priorityLevel: completeness < 60 ? 'high' : completeness < 80 ? 'medium' : 'low',
+          estimatedProcessingTime: '2-3 business days for initial review',
+          requiredDocuments: ['Passport', 'Birth certificate', 'Proof of residence', 'Financial documents']
+        });
+        
+        return fallbackAnalysis;
+      }
+
       throw new Error(`Failed to analyze application: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
@@ -519,7 +566,20 @@ export class AIService {
       applicantEmail: applicationData.applicantEmail,
       submissionDate: applicationData.submissionDate.toISOString(),
       documents: applicationData.documents.map(doc => `${doc.filename} (${doc.mimeType})`).join(', '),
-      formData: JSON.stringify(applicationData.formData, null, 2)
+      // Preserve form data structure instead of converting to JSON string
+      formData: applicationData.formData,
+      // Add individual form fields for better AI analysis
+      applicantFirm: applicationData.formData?.applicantFirm || '',
+      phoneNumber: applicationData.formData?.phoneNumber || '',
+      dateOfBirth: applicationData.formData?.dateOfBirth || '',
+      streetAddress: applicationData.formData?.streetAddress || '',
+      city: applicationData.formData?.city || '',
+      stateProvince: applicationData.formData?.stateProvince || '',
+      postalCode: applicationData.formData?.postalCode || '',
+      country: applicationData.formData?.country || '',
+      applicationCategory: applicationData.formData?.applicationCategory || '',
+      caseSummary: applicationData.formData?.caseSummary || '',
+      documentDescriptions: applicationData.formData?.documentDescriptions || []
     };
   }
 
@@ -552,7 +612,8 @@ export class AIService {
       applicationType: applicationData.applicationType,
       applicantName: applicationData.applicantName,
       applicantEmail: applicationData.applicantEmail,
-      formData: JSON.stringify(applicationData.formData, null, 2),
+      // Preserve form data structure instead of converting to JSON string
+      formData: applicationData.formData,
       documents: applicationData.documents.map(doc => doc.filename).join(', ')
     };
   }

@@ -5,7 +5,7 @@ import { handleApiError, withRetry } from '@/utils/api';
 const api = axios.create({
   // Use relative URL - Vite proxy handles the routing
   baseURL: '/api',
-  timeout: 30000, // 30 seconds timeout for AI operations
+  timeout: 60000, // 60 seconds timeout for AI operations and case creation
   headers: {
     'Content-Type': 'application/json',
   },
