@@ -19,6 +19,7 @@ export class DatabaseSchema {
                 this.createCaseNotesTable();
                 this.createAuditTrailTable();
                 this.createAIInteractionsTable();
+                this.createAIEvaluationsTable();
                 
                 // Create indexes within the same transaction to ensure tables exist
                 this.createIndexesInTransaction();
@@ -26,7 +27,7 @@ export class DatabaseSchema {
 
             // Verify all tables were created
             const tables = this.listTables();
-            const requiredTables = ['cases', 'ai_summaries', 'case_notes', 'audit_trail', 'ai_interactions'];
+            const requiredTables = ['cases', 'ai_summaries', 'case_notes', 'audit_trail', 'ai_interactions', 'ai_evaluations'];
             const missingTables = requiredTables.filter(table => !tables.includes(table));
             
             if (missingTables.length > 0) {
@@ -131,6 +132,28 @@ export class DatabaseSchema {
         console.log('Created ai_interactions table');
     }
 
+    private createAIEvaluationsTable(): void {
+        const sql = `
+      CREATE TABLE IF NOT EXISTS ai_evaluations (
+        id TEXT PRIMARY KEY,
+        case_id TEXT NOT NULL,
+        subject_type TEXT NOT NULL CHECK (subject_type IN ('summary')),
+        subject_id TEXT NOT NULL,
+        operation TEXT NOT NULL CHECK (operation IN ('generate_summary', 'generate_recommendation', 'analyze_application', 'generate_final_summary', 'validate_completeness', 'detect_missing_fields')),
+        judge_model TEXT NOT NULL,
+        rubric_version TEXT NOT NULL,
+        criteria_scores TEXT NOT NULL,
+        overall_score REAL NOT NULL,
+        verdict TEXT NOT NULL CHECK (verdict IN ('pass','fail','needs_review')),
+        comments TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (case_id) REFERENCES cases(id) ON DELETE CASCADE
+      );
+    `;
+        this.db.exec(sql);
+        console.log('Created ai_evaluations table');
+    }
+
     private createIndexesInTransaction(): void {
         const indexes = [
             'CREATE INDEX IF NOT EXISTS idx_cases_status ON cases(status);',
@@ -146,7 +169,10 @@ export class DatabaseSchema {
             'CREATE INDEX IF NOT EXISTS idx_audit_trail_timestamp ON audit_trail(timestamp);',
             'CREATE INDEX IF NOT EXISTS idx_ai_interactions_case_id ON ai_interactions(case_id);',
             'CREATE INDEX IF NOT EXISTS idx_ai_interactions_operation ON ai_interactions(operation);',
-            'CREATE INDEX IF NOT EXISTS idx_ai_interactions_timestamp ON ai_interactions(timestamp);'
+            'CREATE INDEX IF NOT EXISTS idx_ai_interactions_timestamp ON ai_interactions(timestamp);',
+            'CREATE INDEX IF NOT EXISTS idx_ai_evals_case_id ON ai_evaluations(case_id);',
+            'CREATE INDEX IF NOT EXISTS idx_ai_evals_subject ON ai_evaluations(subject_type, subject_id);',
+            'CREATE INDEX IF NOT EXISTS idx_ai_evals_created_at ON ai_evaluations(created_at);'
         ];
 
         indexes.forEach(indexSql => {
@@ -200,7 +226,7 @@ export class DatabaseSchema {
 
     public validateSchema(): boolean {
         try {
-            const expectedTables = ['cases', 'ai_summaries', 'case_notes', 'audit_trail', 'ai_interactions'];
+            const expectedTables = ['cases', 'ai_summaries', 'case_notes', 'audit_trail', 'ai_interactions', 'ai_evaluations'];
             const actualTables = this.listTables();
 
             // Check if all expected tables exist

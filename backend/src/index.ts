@@ -93,10 +93,14 @@ app.get('/version', (_req: Request, res: Response) => {
 // Import routes
 import casesRouter from './routes/cases.js';
 import aiRouter from './routes/ai.js';
+import evaluationRouter from './routes/evaluation.js';
 
 // API routes
 app.use('/api/cases', casesRouter);
 app.use('/api/ai', aiRouter);
+if (NODE_ENV !== 'test') {
+  app.use('/api/internal/eval', evaluationRouter);
+}
 
 // Fallback for unimplemented API routes
 app.use('/api', (_req: Request, res: Response) => {

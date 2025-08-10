@@ -6,13 +6,15 @@ import {
     AuditEntry,
     AIInteraction,
     CaseStatus,
-    ProcessStep
+    ProcessStep,
+    AIEvaluationRow
 } from '../types/database.js';
 import {
     Case as CaseModel,
     AISummary as AISummaryModel,
     ActivityLog,
-    AIInteraction as AIInteractionModel
+    AIInteraction as AIInteractionModel,
+    AIEvaluation as AIEvaluationModel
 } from '../types/index.js';
 import { randomUUID } from 'crypto';
 
@@ -498,6 +500,56 @@ export class DataService {
         );
     }
 
+    /**
+     * Save an AI evaluation
+     */
+    public async saveEvaluation(evaluation: AIEvaluationModel): Promise<void> {
+        try {
+            const stmt = this.getDatabase().prepare(`
+        INSERT INTO ai_evaluations (
+          id, case_id, subject_type, subject_id, operation, judge_model, rubric_version, criteria_scores, overall_score, verdict, comments, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `);
+
+            const result = stmt.run(
+                evaluation.id,
+                evaluation.caseId,
+                evaluation.subjectType,
+                evaluation.subjectId,
+                evaluation.operation,
+                evaluation.judgeModel,
+                evaluation.rubricVersion,
+                JSON.stringify(evaluation.criteriaScores),
+                evaluation.overallScore,
+                evaluation.verdict,
+                evaluation.comments || null,
+                evaluation.createdAt.toISOString(),
+                null
+            );
+
+            if (result.changes === 0) {
+                throw new Error(`Failed to save AI evaluation with ID: ${evaluation.id}`);
+            }
+        } catch (error) {
+            throw new Error(`Failed to save AI evaluation: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+    }
+
+    /**
+     * Get evaluations by case
+     */
+    public async getEvaluationsByCase(caseId: string): Promise<AIEvaluationModel[]> {
+        try {
+            const stmt = this.getDatabase().prepare(`
+        SELECT * FROM ai_evaluations WHERE case_id = ? ORDER BY created_at DESC
+      `);
+            const rows = stmt.all(caseId) as AIEvaluationRow[];
+            return rows.map(r => this.mapDatabaseEvaluationToModel(r));
+        } catch (error) {
+            throw new Error(`Failed to get AI evaluations: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+    }
+
     private mapDatabaseCaseToModel(
         caseRow: Case,
         notes: CaseNote[],
@@ -572,6 +624,24 @@ export class DataService {
         };
 
         return mappedInteraction;
+    }
+
+    // Map DB evaluation row to model
+    private mapDatabaseEvaluationToModel(row: AIEvaluationRow): AIEvaluationModel {
+        return {
+            id: row.id,
+            caseId: row.case_id,
+            subjectType: row.subject_type,
+            subjectId: row.subject_id,
+            operation: row.operation,
+            judgeModel: row.judge_model,
+            rubricVersion: row.rubric_version,
+            criteriaScores: JSON.parse(row.criteria_scores),
+            overallScore: row.overall_score,
+            verdict: row.verdict,
+            createdAt: new Date(row.created_at),
+            ...(row.comments ? { comments: row.comments } : {})
+        };
     }
 
     private mapDatabaseApplicationDataToModel(dbAppData: Record<string, unknown>): import('../types/index.js').ApplicationData {

@@ -70,6 +70,20 @@ const MissingFieldsSchema = z.object({
   estimatedCompletionTime: z.string().min(1, 'Completion time estimate is required')
 });
 
+const EvaluationSchema = z.object({
+  rubricVersion: z.string().min(1),
+  criteriaScores: z.object({
+    faithfulness: z.number().min(0).max(1),
+    coverage: z.number().min(0).max(1),
+    actionability: z.number().min(0).max(1),
+    clarity: z.number().min(0).max(1),
+    safety: z.number().min(0).max(1)
+  }),
+  overallScore: z.number().min(0).max(1),
+  verdict: z.enum(['pass','fail','needs_review']),
+  comments: z.string().optional()
+});
+
 export class PromptTemplateService {
   private templates: TemplateRegistry = new Map();
 
@@ -345,6 +359,59 @@ Format as JSON:
       createdAt: new Date(),
       updatedAt: new Date()
     });
+
+    // LLM-as-a-Judge: Summary Quality Evaluation
+    if (process.env.NODE_ENV !== 'test') {
+      this.registerTemplate({
+        id: 'summary_quality_judge_v1',
+        name: 'Summary Quality Judge',
+        version: '1.0',
+        description: 'Evaluate quality of an AI-generated case summary against a rubric',
+        operation: 'evaluate_summary',
+        template: `You are an expert evaluator. Assess the AI-generated case summary using the rubric. Return ONLY JSON matching the schema.
+
+Rubric (score each 0-1):
+- Faithfulness: Is the summary factually grounded in the provided case data? Avoid hallucinations.
+- Coverage: Does it cover key elements and recommendations?
+- Actionability: Are next steps concrete and useful?
+- Clarity: Is it clear, structured, and concise?
+- Safety: Avoids harmful, biased, or non-compliant content.
+
+Case Context:
+- Case ID: {{caseId}}
+- Application Type: {{applicationType}}
+- Applicant: {{applicantName}}
+- Current Step: {{currentStep}}
+- Notes: {{notes}}
+
+AI Summary Content:
+"""
+{{summaryContent}}
+"""
+
+Output JSON strictly as:
+{
+  "rubricVersion": "1.0",
+  "criteriaScores": {
+    "faithfulness": 0.0,
+    "coverage": 0.0,
+    "actionability": 0.0,
+    "clarity": 0.0,
+    "safety": 0.0
+  },
+  "overallScore": 0.0,
+  "verdict": "pass|fail|needs_review",
+  "comments": "optional concise rationale"
+}`,
+        parameters: {
+          max_tokens: 600,
+          temperature: 0.0
+        },
+        schema: EvaluationSchema,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      });
+    }
   }
 
   /**

@@ -89,3 +89,18 @@ export interface Document {
   mimeType: string;
   uploadedAt: string; // ISO date string
 }
+
+export interface AIEvaluationRow {
+  id: string;
+  case_id: string;
+  subject_type: 'summary';
+  subject_id: string;
+  operation: 'generate_summary' | 'generate_recommendation' | 'analyze_application' | 'generate_final_summary' | 'validate_completeness' | 'detect_missing_fields';
+  judge_model: string;
+  rubric_version: string;
+  criteria_scores: string; // JSON string of AIEvaluationCriteriaScores
+  overall_score: number;
+  verdict: 'pass' | 'fail' | 'needs_review';
+  comments?: string;
+  created_at: string; // ISO date
+}

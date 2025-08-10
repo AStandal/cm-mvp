@@ -186,6 +186,29 @@ export interface AIService {
   detectMissingFields(applicationData: ApplicationData): Promise<MissingFieldsAnalysis>;
 }
 
+export interface AIEvaluationCriteriaScores {
+  faithfulness: number; // factual alignment with case data (0-1)
+  coverage: number;     // covers key details and recommendations (0-1)
+  actionability: number; // recommendations are actionable (0-1)
+  clarity: number;      // clarity, structure, readability (0-1)
+  safety: number;       // avoids harmful or non-compliant content (0-1)
+}
+
+export interface AIEvaluation {
+  id: string;
+  caseId: string;
+  subjectType: 'summary';
+  subjectId: string; // e.g., ai_summaries.id
+  operation: AIInteraction['operation'];
+  judgeModel: string;
+  rubricVersion: string;
+  criteriaScores: AIEvaluationCriteriaScores;
+  overallScore: number; // 0-1
+  verdict: 'pass' | 'fail' | 'needs_review';
+  comments?: string;
+  createdAt: Date;
+}
+
 export interface DataService {
   saveCase(caseData: Case): Promise<void>;
   saveSummary(summary: AISummary): Promise<void>;
@@ -193,6 +216,9 @@ export interface DataService {
   logActivity(activity: ActivityLog): Promise<void>;
   logAIInteraction(interaction: AIInteraction): Promise<void>;
   getAIInteractionHistory(caseId: string): Promise<AIInteraction[]>;
+  // Evaluation storage
+  saveEvaluation(evaluation: AIEvaluation): Promise<void>;
+  getEvaluationsByCase(caseId: string): Promise<AIEvaluation[]>;
 }
 
 // Re-export OpenRouter types

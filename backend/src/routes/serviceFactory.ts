@@ -3,11 +3,13 @@ import { DataService } from '../services/DataService.js';
 import { AIService } from '../services/AIService.js';
 import { OpenRouterClient } from '../services/OpenRouterClient.js';
 import { PromptTemplateService } from '../services/PromptTemplateService.js';
+import { EvaluationService } from '../services/EvaluationService.js';
 
 export interface ServiceContainer {
   caseService: CaseService;
   dataService: DataService;
   aiService: AIService;
+  evaluationService: EvaluationService;
 }
 
 export function createServices(): ServiceContainer {
@@ -26,12 +28,14 @@ export function createServices(): ServiceContainer {
   const openRouterClient = new OpenRouterClient(openRouterConfig, process.env.NODE_ENV === 'test');
   const promptTemplateService = new PromptTemplateService();
   const aiService = new AIService(openRouterClient, dataService, promptTemplateService);
+  const evaluationService = new EvaluationService(openRouterClient, dataService, promptTemplateService);
   const caseService = new CaseService(dataService, aiService);
 
   return {
     caseService,
     dataService,
-    aiService
+    aiService,
+    evaluationService
   };
 }
 
