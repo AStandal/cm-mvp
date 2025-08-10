@@ -137,15 +137,7 @@ describe('Frontend Verification Suite', () => {
     });
 
     it('should have proxy configuration for API', async () => {
-      const viteConfigPath = path.join(process.cwd(), 'vite.config.ts');
-      console.log('Current working directory:', process.cwd());
-      console.log('Vite config path:', viteConfigPath);
-      
-      const viteConfig = await fs.readFile(viteConfigPath, 'utf-8');
-      console.log('Vite config content (first 500 chars):', viteConfig.substring(0, 500));
-      console.log('Vite config contains port 3002:', viteConfig.includes('port: 3002'));
-      console.log('Vite config contains /api:', viteConfig.includes('/api'));
-      console.log('Vite config contains localhost:3001:', viteConfig.includes('localhost:3001'));
+      const viteConfig = await fs.readFile(path.join(process.cwd(), 'vite.config.ts'), 'utf-8');
 
       // Check for API proxy configuration
       expect(viteConfig).toContain('/api');
