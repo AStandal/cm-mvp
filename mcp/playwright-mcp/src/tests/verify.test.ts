@@ -13,6 +13,9 @@ describe('Playwright MCP helpers', () => {
 
     if (json && Array.isArray((json as any).tests)) {
       expect((json as any).tests.length).toBeGreaterThan(0);
+      // Ensure smoke spec is present when JSON is available
+      const names = (json as any).tests.map((t: any) => String(t?.test || t?.name || ''));
+      expect(names.join('\n')).toContain('e2e/smoke.spec.ts');
     } else {
       // Fallback to plaintext output when JSON reporter is not available for --list
       expect(stdout).toMatch(/smoke|spec|test/i);
