@@ -6,6 +6,7 @@ export default defineConfig({
   expect: { timeout: 5000 },
   retries: process.env.CI ? 1 : 0,
   reporter: [['list'], ['json', { outputFile: 'playwright-report/report.json' }]],
+
   use: {
     baseURL: 'http://localhost:3000',
     trace: 'on-first-retry',
@@ -13,10 +14,10 @@ export default defineConfig({
     video: 'retain-on-failure'
   },
   webServer: {
-    command: 'vite --port 3000 --strictPort --host 0.0.0.0',
+    command: 'vite --strictPort',
     url: 'http://localhost:3000',
-    reuseExistingServer: !process.env.CI,
-    timeout: 120_000
+    reuseExistingServer: true,
+    timeout: 60_000
   },
   projects: [
     {

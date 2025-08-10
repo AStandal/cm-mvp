@@ -13,6 +13,7 @@ test('landing page renders and shows key UI', async ({ page }) => {
   await expect(heading).toContainText(/Professional Case Management/i);
 
   // There are two "Request Demo" buttons (navbar and hero). Assert and select hero one.
+
   const ctas = main.getByRole('button', { name: /Request Demo/i });
   await expect(ctas).toHaveCount(2);
   await expect(ctas.last()).toBeVisible();
