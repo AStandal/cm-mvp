@@ -13,10 +13,10 @@ export default defineConfig({
     video: 'retain-on-failure'
   },
   webServer: {
-    command: 'vite --strictPort',
+    command: 'vite --port 3000 --strictPort --host 0.0.0.0',
     url: 'http://localhost:3000',
-    reuseExistingServer: true,
-    timeout: 60_000
+    reuseExistingServer: !process.env.CI,
+    timeout: 120_000
   },
   projects: [
     {
