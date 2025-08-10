@@ -10,7 +10,9 @@
     "module": "ESNext",
     "types": [
       "vitest/globals",
-      "node"
+      "node",
+      "react",
+      "react-dom"
     ],
     /* Bundler mode */
     "moduleResolution": "bundler",
