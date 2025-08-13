@@ -26,8 +26,11 @@ describe('DataService', () => {
     // Set test environment
     process.env.NODE_ENV = 'test';
     
-    // DataService will use the database connection set up by the factory
-    dataService = new DataService();
+    // Reset services to ensure they use the test database
+    const { resetServices, getServices } = await import('../routes/serviceFactory.js');
+    resetServices();
+    const services = getServices();
+    dataService = services.dataService;
   });
 
   afterAll(async () => {
@@ -1062,3 +1065,63 @@ describe('DataService', () => {
     };
   }
 });
+
+// Helper functions for creating test data
+function createTestCase(): Case {
+  return {
+    id: randomUUID(),
+    applicationData: {
+      applicantName: 'John Doe',
+      applicantEmail: 'john.doe@example.com',
+      applicationType: 'standard',
+      submissionDate: new Date(),
+      documents: [],
+      formData: {}
+    },
+    status: CaseStatus.ACTIVE,
+    currentStep: ProcessStep.RECEIVED,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    notes: [],
+    aiSummaries: [],
+    auditTrail: []
+  };
+}
+
+function createTestAISummary(caseId: string): AISummaryModel {
+  return {
+    id: randomUUID(),
+    caseId,
+    type: 'overall',
+    content: 'Test AI summary content',
+    recommendations: ['Test recommendation 1', 'Test recommendation 2'],
+    confidence: 0.85,
+    generatedAt: new Date(),
+    version: 1
+  };
+}
+
+function createTestActivity(caseId: string): ActivityLog {
+  return {
+    id: randomUUID(),
+    caseId,
+    action: 'case_created',
+    userId: 'test-user',
+    timestamp: new Date()
+  };
+}
+
+function createTestAIInteraction(caseId: string): AIInteraction {
+  return {
+    id: randomUUID(),
+    caseId,
+    operation: 'generate_summary',
+    prompt: 'Test prompt',
+    response: 'Test response',
+    model: 'grok-beta',
+    tokensUsed: 100,
+    duration: 1000,
+    success: true,
+    timestamp: new Date()
+  };
+}

@@ -38,7 +38,8 @@ export class TestDatabaseFactory {
     if (config.type === 'memory') {
       // In-memory database for unit tests
       dbPath = ':memory:';
-      connection = DatabaseConnection.getInstance(dbPath, instanceKey);
+      // For unit tests, replace the main singleton so services use the test database
+      connection = DatabaseConnection.getInstance(dbPath);
     } else {
       // File-based database for integration tests
       const testId = `${instanceKey}_${Date.now()}`;
@@ -50,7 +51,8 @@ export class TestDatabaseFactory {
         fs.mkdirSync(testDir, { recursive: true });
       }
       
-      connection = DatabaseConnection.getInstance(dbPath, instanceKey);
+      // For integration tests, also replace the main singleton
+      connection = DatabaseConnection.getInstance(dbPath);
     }
 
     // Initialize database manager
@@ -119,12 +121,11 @@ export class TestDatabaseFactory {
     }
 
     if (connection) {
-      const connectionInstanceId = connection.getInstanceId();
       connection.close();
       this.instances.delete(instanceKey);
       
-      // Reset the specific test instance
-      DatabaseConnection.resetInstance(connectionInstanceId);
+      // Reset the main singleton instance since we replaced it for tests
+      DatabaseConnection.resetInstance();
     }
 
     // Remove file-based test database

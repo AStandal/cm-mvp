@@ -5,13 +5,13 @@ import { DatabaseSeeder } from '../database/seeder.js';
 import { MigrationManager, initialMigrations } from '../database/migrations.js';
 import { DatabaseManager } from '../database/index.js';
 import { ProcessStep } from '../types/database.js';
-import { setupIntegrationTestDatabase } from './utils/testDatabaseFactory.js';
+import { setupUnitTestDatabase } from './utils/testDatabaseFactory.js';
 
 describe('Database Connection', () => {
   let connection: DatabaseConnection;
   
-  // Use file-based database for integration tests
-  const dbHooks = setupIntegrationTestDatabase('Database');
+  // Use in-memory database for unit tests
+  const dbHooks = setupUnitTestDatabase('Database');
 
   beforeAll(async () => {
     await dbHooks.beforeAll();

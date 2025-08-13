@@ -28,8 +28,12 @@ describe('CaseService', () => {
     
     // Set test environment
     process.env.NODE_ENV = 'test';
-
-    dataService = new DataService();
+    
+    // Reset services to ensure they use the test database
+    const { resetServices, getServices } = await import('../routes/serviceFactory.js');
+    resetServices();
+    const services = getServices();
+    dataService = services.dataService;
     
     // Mock AIService for testing
     aiService = {
@@ -753,3 +757,57 @@ describe('CaseService', () => {
     };
   }
 });
+
+// Helper functions for creating test data
+function createTestApplicationData(): ApplicationData {
+  return {
+    applicantName: 'John Doe',
+    applicantEmail: 'john.doe@example.com',
+    applicationType: 'standard',
+    submissionDate: new Date(),
+    documents: [],
+    formData: {}
+  };
+}
+
+function createTestAISummary(caseId: string): AISummary {
+  return {
+    id: randomUUID(),
+    caseId,
+    type: 'overall',
+    content: 'Test AI summary content',
+    recommendations: ['Test recommendation 1', 'Test recommendation 2'],
+    confidence: 0.85,
+    generatedAt: new Date(),
+    version: 1
+  };
+}
+
+function createTestActivity(caseId: string): ActivityLog {
+  return {
+    id: randomUUID(),
+    caseId,
+    action: 'case_created',
+    userId: 'test-user',
+    timestamp: new Date()
+  };
+}
+
+function createTestApplicationAnalysis(): ApplicationAnalysis {
+  return {
+    completenessScore: 0.9,
+    riskLevel: 'low',
+    recommendedActions: ['Review documents', 'Verify information'],
+    keyFindings: ['All required fields present', 'Valid email format'],
+    confidence: 0.85
+  };
+}
+
+function createTestMissingFieldsAnalysis(): MissingFieldsAnalysis {
+  return {
+    missingFields: [],
+    completenessScore: 0.95,
+    recommendations: ['Application is complete'],
+    criticalFieldsMissing: false
+  };
+}

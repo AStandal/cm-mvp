@@ -49,12 +49,13 @@ describe('API Behavior and Schema Tests', () => {
           response = await request(app).post(path).send(body || {});
         }
 
-        expect(response.status).toBe(expectedStatus);
-        expect(response.headers['content-type']).toMatch(/application\/json/);
+        expect(response).toBeDefined();
+        expect(response!.status).toBe(expectedStatus);
+        expect(response!.headers['content-type']).toMatch(/application\/json/);
         
         if (expectedStatus < 400) {
-          expect(response.body).toHaveProperty('success', true);
-          expect(response.body).toHaveProperty('data');
+          expect(response!.body).toHaveProperty('success', true);
+          expect(response!.body).toHaveProperty('data');
         }
       }
     });
@@ -146,11 +147,12 @@ describe('API Behavior and Schema Tests', () => {
           }
           
           // Should return success or client error, not method not allowed
-          expect([200, 201, 400]).toContain(response.status);
-          expect(response.status).not.toBe(405);
+          expect(response).toBeDefined();
+          expect([200, 201, 400]).toContain(response!.status);
+          expect(response!.status).not.toBe(405);
           
           // All responses should be JSON
-          expect(response.headers['content-type']).toMatch(/application\/json/);
+          expect(response!.headers['content-type']).toMatch(/application\/json/);
         }
       }
     });
@@ -237,7 +239,7 @@ describe('API Behavior and Schema Tests', () => {
         { method: 'GET', path: '/version' }
       ];
 
-      for (const { method, path } of successEndpoints) {
+      for (const { path } of successEndpoints) {
         const response = await request(app).get(path);
 
         expect(response.status).toBeLessThan(400);

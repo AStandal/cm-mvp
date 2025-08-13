@@ -16,7 +16,7 @@ import './docs.api.test.js';
 import './documentation.test.js';
 
 // Export test utilities for use in other test files
-export { setupDatabaseHooks, testDataHelpers, getTestDatabase } from './setup.js';
+export { setupDatabaseHooks, testDataHelpers } from './setup.js';
 
 /**
  * API Test Configuration

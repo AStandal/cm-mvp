@@ -1,4 +1,4 @@
-import { beforeAll, afterAll, beforeEach, vi } from 'vitest';
+import { beforeAll, afterAll, beforeEach } from 'vitest';
 import { setupAPITestDatabase } from '../utils/testDatabaseFactory.js';
 import { resetServices } from '@/routes/serviceFactory.js';
 
@@ -47,7 +47,7 @@ export const testDataHelpers = {
       applicantName: 'Test Applicant',
       applicantEmail: 'test@example.com',
       applicationType: 'standard',
-      submissionDate: new Date().toISOString(),
+      submissionDate: new Date(),
       documents: [],
       formData: {},
       ...overrides
