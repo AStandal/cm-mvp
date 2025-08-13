@@ -62,10 +62,10 @@ const validateInput = (schema: z.ZodSchema) => {
 // Middleware for parameter validation
 const validateCaseId = (req: Request, res: Response, next: NextFunction): void => {
   const { id } = req.params;
-  
+
   // Decode the URL parameter and check if it's empty or just whitespace
   const decodedId = decodeURIComponent(id || '');
-  
+
   if (!id || typeof id !== 'string' || decodedId.trim().length === 0) {
     const errorResponse: ErrorResponse = {
       error: {
@@ -78,7 +78,7 @@ const validateCaseId = (req: Request, res: Response, next: NextFunction): void =
     res.status(400).json(errorResponse);
     return;
   }
-  
+
   next();
 };
 
@@ -102,7 +102,7 @@ router.post('/', validateInput(createCaseSchema), asyncHandler(async (req: Reque
     // Convert string dates to Date objects
     const processedApplicationData: ApplicationData = {
       ...applicationData,
-      submissionDate: applicationData.submissionDate 
+      submissionDate: applicationData.submissionDate
         ? new Date(applicationData.submissionDate)
         : new Date(),
       documents: applicationData.documents?.map((doc: CaseDocument) => ({
@@ -113,7 +113,7 @@ router.post('/', validateInput(createCaseSchema), asyncHandler(async (req: Reque
 
     // Get services and create the case
     const { caseService } = getServices();
-    
+
     // Create case - use createCaseWithoutAI to avoid timeout issues with AI processing
     // TODO: In production, implement proper AI service configuration and error handling
     const newCase = await caseService.createCaseWithoutAI(processedApplicationData, userId);
@@ -192,7 +192,6 @@ router.get('/', asyncHandler(async (req: Request, res: Response): Promise<void> 
       data: result,
       timestamp: new Date().toISOString()
     });
-    
   } catch (error) {
     const errorResponse: ErrorResponse = {
       error: {
@@ -203,7 +202,6 @@ router.get('/', asyncHandler(async (req: Request, res: Response): Promise<void> 
       timestamp: new Date().toISOString(),
       requestId: randomUUID()
     };
-    
     res.status(500).json(errorResponse);
   }
 }));
@@ -263,11 +261,52 @@ router.get('/:id', validateCaseId, asyncHandler(async (req: Request, res: Respon
  * Retrieve AI summary for a case
  * Requirements: 1.3, 1.4, 2.1, 2.2
  */
-router.get('/:id/ai-summary', validateCaseId, asyncHandler(async (_req: Request, res: Response): Promise<void> => {
-  res.status(404).json({
-    error: 'API endpoints not yet implemented',
-    message: 'This endpoint will be available in future releases'
-  });
+router.get('/:id/ai-summary', validateCaseId, asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  const { id } = req.params;
+
+  try {
+    // Get services and retrieve the case
+    const { caseService, aiService } = getServices();
+    const caseData = await caseService.getCaseById(id);
+
+    if (!caseData) {
+      const errorResponse: ErrorResponse = {
+        error: {
+          code: 'CASE_NOT_FOUND',
+          message: `Case with ID ${id} not found`
+        },
+        timestamp: new Date().toISOString(),
+        requestId: randomUUID()
+      };
+      res.status(404).json(errorResponse);
+      return;
+    }
+
+    // Generate AI summary
+    const aiSummary = await aiService.generateOverallSummary(caseData);
+
+    // Return the AI summary
+    res.status(200).json({
+      success: true,
+      data: {
+        aiSummary
+      },
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (error) {
+    const errorResponse: ErrorResponse = {
+      error: {
+        code: 'AI_SUMMARY_GENERATION_FAILED',
+        message: error instanceof Error ? error.message : 'Failed to generate AI summary',
+        details: process.env.NODE_ENV === 'development' ? error : undefined
+      },
+      timestamp: new Date().toISOString(),
+      requestId: randomUUID()
+    };
+
+    res.status(500).json(errorResponse);
+  }
 }));
 
 /**
@@ -275,11 +314,53 @@ router.get('/:id/ai-summary', validateCaseId, asyncHandler(async (_req: Request,
  * Refresh AI insights for a case
  * Requirements: 2.1, 2.4
  */
-router.post('/:id/ai-refresh', validateCaseId, asyncHandler(async (_req: Request, res: Response): Promise<void> => {
-  res.status(404).json({
-    error: 'API endpoints not yet implemented',
-    message: 'This endpoint will be available in future releases'
-  });
+router.post('/:id/ai-refresh', validateCaseId, asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  const { id } = req.params;
+
+  try {
+    // Get services and retrieve the case
+    const { caseService, aiService } = getServices();
+    const caseData = await caseService.getCaseById(id);
+
+    if (!caseData) {
+      const errorResponse: ErrorResponse = {
+        error: {
+          code: 'CASE_NOT_FOUND',
+          message: `Case with ID ${id} not found`
+        },
+        timestamp: new Date().toISOString(),
+        requestId: randomUUID()
+      };
+      res.status(404).json(errorResponse);
+      return;
+    }
+
+    // Generate fresh AI summary
+    const aiSummary = await aiService.generateOverallSummary(caseData);
+
+    // Return the refreshed AI summary
+    res.status(200).json({
+      success: true,
+      data: {
+        aiSummary
+      },
+      message: 'AI insights refreshed successfully',
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (error) {
+    const errorResponse: ErrorResponse = {
+      error: {
+        code: 'AI_REFRESH_FAILED',
+        message: error instanceof Error ? error.message : 'Failed to refresh AI insights',
+        details: process.env.NODE_ENV === 'development' ? error : undefined
+      },
+      timestamp: new Date().toISOString(),
+      requestId: randomUUID()
+    };
+
+    res.status(500).json(errorResponse);
+  }
 }));
 
 /**

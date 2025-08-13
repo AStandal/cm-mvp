@@ -162,17 +162,8 @@ describe('AIService', () => {
             mockOpenRouterClient.makeRequest.mockRejectedValue(error);
             mockDataService.logAIInteraction.mockResolvedValue();
 
-            // In test mode, the service should provide fallback data instead of throwing errors
-            const result = await aiService.generateOverallSummary(mockCaseData);
-
-            expect(result).toMatchObject({
-                caseId: 'case-123',
-                type: 'overall',
-                content: expect.stringContaining('development fallback'),
-                recommendations: expect.any(Array),
-                confidence: expect.any(Number),
-                version: 1
-            });
+            // With fallback logic removed, the service should now throw errors
+            await expect(aiService.generateOverallSummary(mockCaseData)).rejects.toThrow('Failed to generate overall summary: OpenRouter API failed');
 
             expect(mockDataService.logAIInteraction).toHaveBeenCalledWith(
                 expect.objectContaining({
@@ -192,17 +183,8 @@ describe('AIService', () => {
             mockOpenRouterClient.makeRequest.mockResolvedValue(malformedResponse);
             mockDataService.logAIInteraction.mockResolvedValue();
 
-            // In test mode, the service should provide fallback data instead of throwing errors
-            const result = await aiService.generateOverallSummary(mockCaseData);
-
-            expect(result).toMatchObject({
-                caseId: 'case-123',
-                type: 'overall',
-                content: expect.stringContaining('development fallback'),
-                recommendations: expect.any(Array),
-                confidence: expect.any(Number),
-                version: 1
-            });
+            // With fallback logic removed, the service should now throw errors for malformed JSON
+            await expect(aiService.generateOverallSummary(mockCaseData)).rejects.toThrow('Failed to generate overall summary');
 
             expect(mockDataService.logAIInteraction).toHaveBeenCalledWith(
                 expect.objectContaining({
@@ -812,17 +794,8 @@ describe('AIService', () => {
                 mockOpenRouterClient.makeRequest.mockResolvedValue(mockResponse);
                 mockDataService.logAIInteraction.mockResolvedValue();
 
-                // In test mode, the service should provide fallback data instead of throwing errors
-                const result = await enhancedAiService.generateOverallSummary(mockEnhancedCase);
-
-                expect(result).toMatchObject({
-                    caseId: 'case-1',
-                    type: 'overall',
-                    content: expect.stringContaining('development fallback'),
-                    recommendations: expect.any(Array),
-                    confidence: expect.any(Number),
-                    version: 1
-                });
+                // With fallback logic removed, the service should now throw errors for invalid response format
+                await expect(enhancedAiService.generateOverallSummary(mockEnhancedCase)).rejects.toThrow('Failed to generate overall summary');
 
                 // Verify error was logged
                 expect(mockDataService.logAIInteraction).toHaveBeenCalledWith(
@@ -1109,17 +1082,8 @@ describe('AIService', () => {
                 mockOpenRouterClient.makeRequest.mockRejectedValue(apiError);
                 mockDataService.logAIInteraction.mockResolvedValue();
 
-                // In test mode, the service should provide fallback data instead of throwing errors
-                const result = await enhancedAiService.generateOverallSummary(mockEnhancedCase);
-
-                expect(result).toMatchObject({
-                    caseId: 'case-1',
-                    type: 'overall',
-                    content: expect.stringContaining('development fallback'),
-                    recommendations: expect.any(Array),
-                    confidence: expect.any(Number),
-                    version: 1
-                });
+                // With fallback logic removed, the service should now throw errors
+                await expect(enhancedAiService.generateOverallSummary(mockEnhancedCase)).rejects.toThrow('Failed to generate overall summary: Detailed API error message');
 
                 // Verify detailed error was logged
                 expect(mockDataService.logAIInteraction).toHaveBeenCalledWith(
