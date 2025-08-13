@@ -5,46 +5,26 @@ import { DatabaseSeeder } from '../database/seeder.js';
 import { MigrationManager, initialMigrations } from '../database/migrations.js';
 import { DatabaseManager } from '../database/index.js';
 import { ProcessStep } from '../types/database.js';
-import path from 'path';
-import fs from 'fs';
+import { setupIntegrationTestDatabase } from './utils/testDatabaseFactory.js';
 
 describe('Database Connection', () => {
   let connection: DatabaseConnection;
-  let testDbPath: string;
+  
+  // Use file-based database for integration tests
+  const dbHooks = setupIntegrationTestDatabase('Database');
 
-  beforeAll(() => {
-    // Create a unique test database for this test suite
-    const testId = `database_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    testDbPath = path.join(process.cwd(), 'test_data', `${testId}.db`);
-
-    // Ensure test directory exists
-    const testDir = path.dirname(testDbPath);
-    if (!fs.existsSync(testDir)) {
-      fs.mkdirSync(testDir, { recursive: true });
-    }
-
+  beforeAll(async () => {
+    await dbHooks.beforeAll();
+    
     // Set test environment
     process.env.NODE_ENV = 'test';
-
-    // Reset and create new connection with test database
-    DatabaseConnection.resetInstance();
-    connection = DatabaseConnection.getInstance(testDbPath);
+    
+    // Get the connection instance created by the factory
+    connection = DatabaseConnection.getInstance();
   });
 
-  afterAll(() => {
-    // Clean up test database
-    if (connection) {
-      connection.close();
-    }
-    DatabaseConnection.resetInstance();
-    
-    if (fs.existsSync(testDbPath)) {
-      try {
-        fs.unlinkSync(testDbPath);
-      } catch (error) {
-        console.warn(`Failed to delete test database: ${error}`);
-      }
-    }
+  afterAll(async () => {
+    await dbHooks.afterAll();
   });
 
   beforeEach(() => {

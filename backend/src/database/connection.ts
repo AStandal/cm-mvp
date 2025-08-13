@@ -4,11 +4,15 @@ import fs from 'fs';
 
 export class DatabaseConnection {
   private static instance: DatabaseConnection | null = null;
+  private static testInstances: Map<string, DatabaseConnection> = new Map();
   private db: Database.Database | null = null;
   private readonly dbPath: string;
+  private readonly instanceId: string;
   private isInitialized = false;
 
-  private constructor(customPath?: string) {
+  private constructor(customPath?: string, instanceId?: string) {
+    this.instanceId = instanceId || 'default';
+    
     // Use custom path for testing or default path for production
     if (customPath) {
       this.dbPath = customPath;
@@ -21,10 +25,12 @@ export class DatabaseConnection {
       this.dbPath = path.join(dataDir, 'case_management.db');
     }
     
-    // Ensure directory exists for custom paths
-    const dir = path.dirname(this.dbPath);
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
+    // Ensure directory exists for custom paths (but not for in-memory databases)
+    if (this.dbPath !== ':memory:') {
+      const dir = path.dirname(this.dbPath);
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+      }
     }
   }
 
@@ -51,7 +57,17 @@ export class DatabaseConnection {
     console.log(`Database connected: ${this.dbPath}`);
   }
 
-  public static getInstance(customPath?: string): DatabaseConnection {
+  public static getInstance(customPath?: string, instanceId?: string): DatabaseConnection {
+    // If we're in test mode and have an instanceId, use test instances
+    if (process.env.NODE_ENV === 'test' && instanceId) {
+      if (!DatabaseConnection.testInstances.has(instanceId)) {
+        const instance = new DatabaseConnection(customPath, instanceId);
+        DatabaseConnection.testInstances.set(instanceId, instance);
+      }
+      return DatabaseConnection.testInstances.get(instanceId)!;
+    }
+    
+    // For production or when no instanceId is provided, use singleton pattern
     if (!DatabaseConnection.instance || customPath) {
       if (DatabaseConnection.instance && customPath) {
         // Close existing connection if we need a new path
@@ -62,16 +78,37 @@ export class DatabaseConnection {
           console.warn('Warning: Error closing database connection:', error);
         }
       }
-      DatabaseConnection.instance = new DatabaseConnection(customPath);
+      DatabaseConnection.instance = new DatabaseConnection(customPath, instanceId);
     }
     return DatabaseConnection.instance;
   }
 
-  public static resetInstance(): void {
-    if (DatabaseConnection.instance) {
-      DatabaseConnection.instance.close();
-      DatabaseConnection.instance = null;
+  public static resetInstance(instanceId?: string): void {
+    if (process.env.NODE_ENV === 'test' && instanceId) {
+      // Reset specific test instance
+      const instance = DatabaseConnection.testInstances.get(instanceId);
+      if (instance) {
+        instance.close();
+        DatabaseConnection.testInstances.delete(instanceId);
+      }
+    } else {
+      // Reset main singleton instance
+      if (DatabaseConnection.instance) {
+        DatabaseConnection.instance.close();
+        DatabaseConnection.instance = null;
+      }
     }
+  }
+
+  public static resetAllTestInstances(): void {
+    for (const [instanceId, instance] of DatabaseConnection.testInstances) {
+      try {
+        instance.close();
+      } catch (error) {
+        console.warn(`Warning: Error closing test instance ${instanceId}:`, error);
+      }
+    }
+    DatabaseConnection.testInstances.clear();
   }
 
   public getDatabase(): Database.Database {
@@ -96,6 +133,10 @@ export class DatabaseConnection {
 
   public getDatabasePath(): string {
     return this.dbPath;
+  }
+
+  public getInstanceId(): string {
+    return this.instanceId;
   }
 
   // Transaction helper
