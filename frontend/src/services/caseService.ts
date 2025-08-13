@@ -5,6 +5,9 @@ export const caseService = {
   // Get all cases with optional filtering
   getCases: async (params?: {
     status?: CaseStatus;
+    search?: string;
+    sortField?: string;
+    sortDirection?: 'asc' | 'desc';
     page?: number;
     limit?: number;
   }): Promise<{ cases: Case[]; total: number; page: number; limit: number }> => {

@@ -156,11 +156,56 @@ router.post('/', validateInput(createCaseSchema), asyncHandler(async (req: Reque
  * Retrieve all cases with optional filtering
  * Requirements: 1.1, 1.2
  */
-router.get('/', asyncHandler(async (_req: Request, res: Response): Promise<void> => {
-  res.status(404).json({
-    error: 'API endpoints not yet implemented',
-    message: 'This endpoint will be available in future releases'
-  });
+router.get('/', asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { status, search, sortField, sortDirection, page, limit } = req.query;
+    
+    // Get services and retrieve cases
+    const { caseService } = getServices();
+    
+    // Parse query parameters
+    const params: {
+      status?: string;
+      search?: string;
+      sortField?: string;
+      sortDirection?: 'asc' | 'desc';
+      page?: number;
+      limit?: number;
+    } = {};
+    
+    if (status) params.status = status as string;
+    if (search) params.search = search as string;
+    if (sortField) params.sortField = sortField as string;
+    if (sortDirection) params.sortDirection = sortDirection as 'asc' | 'desc';
+    if (page) params.page = parseInt(page as string, 10);
+    if (limit) params.limit = parseInt(limit as string, 10);
+    
+    // Set defaults
+    if (!params.page) params.page = 1;
+    if (!params.limit) params.limit = 10;
+    
+    const result = await caseService.getAllCases(params);
+    
+    // Return the cases data
+    res.status(200).json({
+      success: true,
+      data: result,
+      timestamp: new Date().toISOString()
+    });
+    
+  } catch (error) {
+    const errorResponse: ErrorResponse = {
+      error: {
+        code: 'CASES_RETRIEVAL_FAILED',
+        message: error instanceof Error ? error.message : 'Failed to retrieve cases',
+        details: process.env.NODE_ENV === 'development' ? error : undefined
+      },
+      timestamp: new Date().toISOString(),
+      requestId: randomUUID()
+    };
+    
+    res.status(500).json(errorResponse);
+  }
 }));
 
 /**

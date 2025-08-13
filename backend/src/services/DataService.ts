@@ -205,17 +205,190 @@ export class DataService {
     }
 
     /**
-     * Get all cases
+     * Get case counts for sorting (documents and notes)
      */
-    public async getAllCases(): Promise<CaseModel[]> {
+    public async getCaseCounts(caseIds: string[]): Promise<Map<string, { documentCount: number; noteCount: number }>> {
         try {
-            const stmt = this.getDatabase().prepare(`
-        SELECT * FROM cases ORDER BY created_at DESC
-      `);
+            if (caseIds.length === 0) {
+                return new Map();
+            }
+            
+            const counts = new Map<string, { documentCount: number; noteCount: number }>();
+            
+            // Get document counts from JSON data in cases table
+            const docStmt = this.getDatabase().prepare(`
+                SELECT id, json_array_length(json_extract(application_data, '$.documents')) as document_count
+                FROM cases 
+                WHERE id IN (${caseIds.map(() => '?').join(',')})
+            `);
+            const docCounts = docStmt.all(...caseIds) as Array<{ id: string; document_count: number }>;
+            
+            // Get note counts
+            const noteStmt = this.getDatabase().prepare(`
+                SELECT case_id, COUNT(*) as count 
+                FROM case_notes 
+                WHERE case_id IN (${caseIds.map(() => '?').join(',')})
+                GROUP BY case_id
+            `);
+            const noteCounts = noteStmt.all(...caseIds) as Array<{ case_id: string; count: number }>;
+            
+            // Initialize all cases with 0 counts
+            for (const caseId of caseIds) {
+                counts.set(caseId, { documentCount: 0, noteCount: 0 });
+            }
+            
+            // Set actual counts
+            for (const docCount of docCounts) {
+                const current = counts.get(docCount.id);
+                if (current) {
+                    current.documentCount = docCount.document_count || 0;
+                }
+            }
+            
+            for (const noteCount of noteCounts) {
+                const current = counts.get(noteCount.case_id);
+                if (current) {
+                    current.noteCount = noteCount.count;
+                }
+            }
+            
+            return counts;
+        } catch (error) {
+            throw new Error(`Failed to get case counts: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+    }
 
-            const caseRows = stmt.all() as Case[];
+    /**
+     * Get all cases with filtering, sorting, and pagination
+     */
+    public async getAllCases(params?: {
+        status?: string;
+        search?: string;
+        sortField?: string;
+        sortDirection?: 'asc' | 'desc';
+        page?: number;
+        limit?: number;
+    }): Promise<{ cases: CaseModel[]; total: number; page: number; limit: number }> {
+        try {
+            const { status, search, sortField = 'created_at', sortDirection = 'desc', page = 1, limit = 10 } = params || {};
+            
+            // Build the base query
+            let sql = 'SELECT * FROM cases';
+            const whereConditions: string[] = [];
+            const queryParams: any[] = [];
+            
+            // Add status filter
+            if (status) {
+                whereConditions.push('status = ?');
+                queryParams.push(status);
+            }
+            
+            // Add search filter
+            if (search) {
+                whereConditions.push(`(
+                    id LIKE ? OR 
+                    json_extract(application_data, '$.applicantName') LIKE ? OR 
+                    json_extract(application_data, '$.applicationType') LIKE ?
+                )`);
+                const searchPattern = `%${search}%`;
+                queryParams.push(searchPattern, searchPattern, searchPattern);
+            }
+            
+            // Add WHERE clause if there are conditions
+            if (whereConditions.length > 0) {
+                sql += ' WHERE ' + whereConditions.join(' AND ');
+            }
+            
+            // Get total count for pagination
+            const countSql = sql.replace('SELECT *', 'SELECT COUNT(*) as count');
+            const countStmt = this.getDatabase().prepare(countSql);
+            const totalResult = countStmt.get(...queryParams) as { count: number };
+            const total = totalResult.count;
+            
+            // Add sorting
+            const validSortFields = [
+                'id', 'status', 'current_step', 'created_at', 'updated_at',
+                'applicant_name', 'application_type', 'submission_date'
+            ];
+            
+            let actualSortField = sortField;
+            if (sortField === 'applicantName') {
+                actualSortField = 'json_extract(application_data, \'$.applicantName\')';
+            } else if (sortField === 'applicationType') {
+                actualSortField = 'json_extract(application_data, \'$.applicationType\')';
+            } else if (sortField === 'submissionDate') {
+                actualSortField = 'json_extract(application_data, \'$.submissionDate\')';
+            } else if (!validSortFields.includes(sortField)) {
+                actualSortField = 'created_at'; // Default fallback
+            }
+            
+            // Handle special sorting for counts
+            if (sortField === 'documentCount' || sortField === 'noteCount') {
+                // For count-based sorting, we need to get all cases first, then sort by counts
+                const allCasesSql = sql.replace('SELECT *', 'SELECT id');
+                const allCasesStmt = this.getDatabase().prepare(allCasesSql);
+                const allCaseIds = allCasesStmt.all(...queryParams) as Array<{ id: string }>;
+                
+                if (allCaseIds.length === 0) {
+                    return { cases: [], total: 0, page, limit };
+                }
+                
+                // Get counts for all cases
+                const caseIds = allCaseIds.map(row => row.id);
+                const counts = await this.getCaseCounts(caseIds);
+                
+                // Sort by counts
+                const sortedCaseIds = caseIds.sort((a, b) => {
+                    const aCount = sortField === 'documentCount' ? counts.get(a)?.documentCount || 0 : counts.get(a)?.noteCount || 0;
+                    const bCount = sortField === 'documentCount' ? counts.get(b)?.documentCount || 0 : counts.get(b)?.noteCount || 0;
+                    
+                    if (sortDirection === 'asc') {
+                        return aCount - bCount;
+                    } else {
+                        return bCount - aCount;
+                    }
+                });
+                
+                // Apply pagination to sorted IDs
+                const startIndex = (page - 1) * limit;
+                const endIndex = startIndex + limit;
+                const paginatedCaseIds = sortedCaseIds.slice(startIndex, endIndex);
+                
+                // Get the actual case data for paginated IDs
+                const cases: CaseModel[] = [];
+                for (const caseId of paginatedCaseIds) {
+                    const caseRow = this.getDatabase().prepare('SELECT * FROM cases WHERE id = ?').get(caseId) as Case;
+                    if (caseRow) {
+                        const [notes, aiSummaries, auditTrail] = await Promise.all([
+                            this.getCaseNotes(caseRow.id),
+                            this.getCaseSummaries(caseRow.id),
+                            this.getAuditTrail(caseRow.id)
+                        ]);
+                        cases.push(this.mapDatabaseCaseToModel(caseRow, notes, aiSummaries, auditTrail));
+                    }
+                }
+                
+                return {
+                    cases,
+                    total: caseIds.length,
+                    page,
+                    limit
+                };
+            }
+            
+            sql += ` ORDER BY ${actualSortField} ${sortDirection.toUpperCase()}`;
+            
+            // Add pagination
+            const offset = (page - 1) * limit;
+            sql += ' LIMIT ? OFFSET ?';
+            queryParams.push(limit, offset);
+            
+            // Execute the main query
+            const stmt = this.getDatabase().prepare(sql);
+            const caseRows = stmt.all(...queryParams) as Case[];
+            
+            // Build case models with related data
             const cases: CaseModel[] = [];
-
             for (const caseRow of caseRows) {
                 const [notes, aiSummaries, auditTrail] = await Promise.all([
                     this.getCaseNotes(caseRow.id),
@@ -225,8 +398,13 @@ export class DataService {
 
                 cases.push(this.mapDatabaseCaseToModel(caseRow, notes, aiSummaries, auditTrail));
             }
-
-            return cases;
+            
+            return {
+                cases,
+                total,
+                page,
+                limit
+            };
         } catch (error) {
             throw new Error(`Failed to get all cases: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }

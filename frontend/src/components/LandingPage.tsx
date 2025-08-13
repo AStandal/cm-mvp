@@ -1,4 +1,5 @@
 import React from "react";
+import { Link } from "react-router-dom";
 
 // Simple SVG icons for case management
 const FolderIcon = () => (
@@ -23,7 +24,7 @@ const LandingPage: React.FC = () => {
           <span className="text-2xl font-bold text-blue-800 tracking-tight">CaseFlow</span>
         </div>
         <div className="flex gap-4">
-          <button className="px-4 py-2 rounded border border-blue-700 text-blue-700 font-semibold hover:bg-blue-50 transition">Sign in</button>
+          <Link to="/cases" className="px-4 py-2 rounded border border-blue-700 text-blue-700 font-semibold hover:bg-blue-50 transition">Sign in</Link>
           <button className="px-4 py-2 rounded bg-blue-700 text-white font-semibold shadow hover:bg-blue-800 transition">Request Demo</button>
         </div>
       </nav>
