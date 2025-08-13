@@ -33,12 +33,12 @@ export class AIService {
     const startTime = Date.now();
     const interactionId = randomUUID();
     const templateId = 'overall_summary_v1';
-    
+
     try {
       const templateData = this.buildOverallSummaryData(caseData);
       const prompt = this.promptTemplateService.generatePrompt(templateId, templateData);
       const parameters = this.promptTemplateService.getTemplateParameters(templateId);
-      
+
       const response = await this.openRouterClient.makeRequest(prompt, parameters);
 
       // Validate response using template schema
@@ -53,7 +53,7 @@ export class AIService {
       }
 
       const summary = this.createAISummary(validation.data!, caseData.id);
-      
+
       // Log successful AI interaction
       await this.logAIInteraction({
         id: interactionId,
@@ -74,7 +74,7 @@ export class AIService {
     } catch (error) {
       const templateData = this.buildOverallSummaryData(caseData);
       const prompt = this.promptTemplateService.generatePrompt(templateId, templateData);
-      
+
       // Log failed AI interaction
       await this.logAIInteraction({
         id: interactionId,
@@ -92,26 +92,7 @@ export class AIService {
         promptVersion: '1.0'
       });
 
-      // In development or test mode, provide fallback data if AI service is unavailable
-      if ((process.env.NODE_ENV === 'test') || (process.env.NODE_ENV === 'development' && error instanceof Error && 
-          (error.message.includes('401') || error.message.includes('OpenRouter API failed') || 
-           error.message.includes('test-key') || error.message.includes('OpenRouter API failed after')))) { // Catch the specific error from OpenRouterClient
-        
-        console.warn('AI service unavailable in development mode, providing fallback data');
-        
-        // Return fallback AI summary for development
-        return this.createAISummary({
-          content: `This is a development fallback AI summary for case ${caseData.id}. The application appears to be a ${caseData.applicationData.applicationType} application submitted by ${caseData.applicationData.applicantName}. The case is currently in ${caseData.currentStep} status.`,
-          recommendations: [
-            'Review application completeness',
-            'Verify applicant information',
-            'Check required documentation',
-            'Schedule follow-up if needed'
-          ],
-          confidence: 0.75
-        }, caseData.id);
-      }
-      
+
       throw new Error(`Failed to generate overall summary: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
@@ -123,12 +104,12 @@ export class AIService {
     const startTime = Date.now();
     const interactionId = randomUUID();
     const templateId = 'step_recommendation_v1';
-    
+
     try {
       const templateData = this.buildStepRecommendationData(caseData, step);
       const prompt = this.promptTemplateService.generatePrompt(templateId, templateData);
       const parameters = this.promptTemplateService.getTemplateParameters(templateId);
-      
+
       const response = await this.openRouterClient.makeRequest(prompt, parameters);
 
       // Validate response using template schema
@@ -143,7 +124,7 @@ export class AIService {
       }
 
       const recommendation = this.createAIRecommendation(validation.data!, caseData.id, step);
-      
+
       // Log successful AI interaction
       await this.logAIInteraction({
         id: interactionId,
@@ -165,7 +146,7 @@ export class AIService {
     } catch (error) {
       const templateData = this.buildStepRecommendationData(caseData, step);
       const prompt = this.promptTemplateService.generatePrompt(templateId, templateData);
-      
+
       // Log failed AI interaction
       await this.logAIInteraction({
         id: interactionId,
@@ -185,13 +166,13 @@ export class AIService {
       });
 
       // In development or test mode, provide fallback data if AI service is unavailable
-      if ((process.env.NODE_ENV === 'test') || (process.env.NODE_ENV === 'development' && error instanceof Error && 
-          (error.message.includes('401') || error.message.includes('OpenRouter API failed') || 
-           error.message.includes('Failed to generate step recommendation') || error.message.includes('test-key') ||
-           error.message.includes('OpenRouter API failed after')))) { // Catch the specific error from OpenRouterClient
-        
+      if ((process.env.NODE_ENV === 'test') || (process.env.NODE_ENV === 'development' && error instanceof Error &&
+        (error.message.includes('401') || error.message.includes('OpenRouter API failed') ||
+          error.message.includes('Failed to generate step recommendation') || error.message.includes('test-key') ||
+          error.message.includes('OpenRouter API failed after')))) { // Catch the specific error from OpenRouterClient
+
         console.warn('AI service unavailable in development/test mode, providing fallback data for step recommendation');
-        
+
         // Return fallback step recommendation for development/test
         return this.createAIRecommendation({
           recommendations: [
@@ -204,7 +185,7 @@ export class AIService {
           confidence: 0.8
         }, caseData.id, step);
       }
-      
+
       throw new Error(`Failed to generate step recommendation: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
@@ -217,12 +198,12 @@ export class AIService {
     const interactionId = randomUUID();
     const caseId = 'temp-' + randomUUID(); // Temporary ID for logging
     const templateId = 'application_analysis_v1';
-    
+
     try {
       const templateData = this.buildApplicationAnalysisData(applicationData);
       const prompt = this.promptTemplateService.generatePrompt(templateId, templateData);
       const parameters = this.promptTemplateService.getTemplateParameters(templateId);
-      
+
       const response = await this.openRouterClient.makeRequest(prompt, parameters);
 
       // Validate response using template schema
@@ -241,7 +222,7 @@ export class AIService {
       }
 
       const analysis = this.createApplicationAnalysis(validation.data!);
-      
+
       // Log successful AI interaction
       await this.logAIInteraction({
         id: interactionId,
@@ -262,7 +243,7 @@ export class AIService {
     } catch (error) {
       const templateData = this.buildApplicationAnalysisData(applicationData);
       const prompt = this.promptTemplateService.generatePrompt(templateId, templateData);
-      
+
       // Log failed AI interaction
       await this.logAIInteraction({
         id: interactionId,
@@ -281,24 +262,24 @@ export class AIService {
       });
 
       // In development or test mode, provide fallback data if AI service is unavailable
-      if ((process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test') && error instanceof Error && 
-          (error.message.includes('401') || error.message.includes('OpenRouter API failed') || 
-           error.message.includes('Failed to analyze application') || error.message.includes('test-key') ||
-           error.message.includes('OpenRouter API failed after') || // Catch the specific error from OpenRouterClient
-           process.env.NODE_ENV === 'test')) { // In test mode, always provide fallback data
-        
+      if ((process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test') && error instanceof Error &&
+        (error.message.includes('401') || error.message.includes('OpenRouter API failed') ||
+          error.message.includes('Failed to analyze application') || error.message.includes('test-key') ||
+          error.message.includes('OpenRouter API failed after') || // Catch the specific error from OpenRouterClient
+          process.env.NODE_ENV === 'test')) { // In test mode, always provide fallback data
+
         console.warn('AI service unavailable in development mode, providing fallback data for application analysis');
-        
+
         // Calculate completeness based on form data
         const requiredFields = ['applicantName', 'applicantEmail', 'applicationType', 'caseSummary'];
         const completedFields = requiredFields.filter(field => {
-          const value = applicationData[field as keyof ApplicationData] || 
-                       (applicationData.formData && applicationData.formData[field]);
+          const value = applicationData[field as keyof ApplicationData] ||
+            (applicationData.formData && applicationData.formData[field]);
           return typeof value === 'string' ? value.trim() !== '' : Array.isArray(value) ? value.length > 0 : false;
         });
-        
+
         const completeness = Math.round((completedFields.length / requiredFields.length) * 100);
-        
+
         // Generate fallback analysis
         const fallbackAnalysis = this.createApplicationAnalysis({
           summary: `Development fallback analysis for ${applicationData.applicationType} application submitted by ${applicationData.applicantName}. Application appears to be ${completeness}% complete.`,
@@ -324,7 +305,7 @@ export class AIService {
           estimatedProcessingTime: '2-3 business days for initial review',
           requiredDocuments: ['Passport', 'Birth certificate', 'Proof of residence', 'Financial documents']
         });
-        
+
         return fallbackAnalysis;
       }
 
@@ -339,12 +320,12 @@ export class AIService {
     const startTime = Date.now();
     const interactionId = randomUUID();
     const templateId = 'final_summary_v1';
-    
+
     try {
       const templateData = this.buildFinalSummaryData(caseData);
       const prompt = this.promptTemplateService.generatePrompt(templateId, templateData);
       const parameters = this.promptTemplateService.getTemplateParameters(templateId);
-      
+
       const response = await this.openRouterClient.makeRequest(prompt, parameters);
 
       // Validate response using template schema
@@ -362,7 +343,7 @@ export class AIService {
       }
 
       const finalSummary = this.createFinalSummary(validation.data!);
-      
+
       // Log successful AI interaction
       await this.logAIInteraction({
         id: interactionId,
@@ -383,7 +364,7 @@ export class AIService {
     } catch (error) {
       const templateData = this.buildFinalSummaryData(caseData);
       const prompt = this.promptTemplateService.generatePrompt(templateId, templateData);
-      
+
       // Log failed AI interaction
       await this.logAIInteraction({
         id: interactionId,
@@ -402,13 +383,13 @@ export class AIService {
       });
 
       // In development or test mode, provide fallback data if AI service is unavailable
-      if ((process.env.NODE_ENV === 'test') || (process.env.NODE_ENV === 'development' && error instanceof Error && 
-          (error.message.includes('401') || error.message.includes('OpenRouter API failed') || 
-           error.message.includes('Failed to generate final summary') || error.message.includes('test-key') ||
-           error.message.includes('OpenRouter API failed after')))) { // Catch the specific error from OpenRouterClient
-        
+      if ((process.env.NODE_ENV === 'test') || (process.env.NODE_ENV === 'development' && error instanceof Error &&
+        (error.message.includes('401') || error.message.includes('OpenRouter API failed') ||
+          error.message.includes('Failed to generate final summary') || error.message.includes('test-key') ||
+          error.message.includes('OpenRouter API failed after')))) { // Catch the specific error from OpenRouterClient
+
         console.warn('AI service unavailable in development/test mode, providing fallback data for final summary');
-        
+
         // Return fallback final summary for development/test
         return this.createFinalSummary({
           overallSummary: `Development fallback summary for case ${caseData.id}. This is a ${caseData.applicationData.applicationType} application that has been processed through the system.`,
@@ -435,7 +416,7 @@ export class AIService {
           ]
         });
       }
-      
+
       throw new Error(`Failed to generate final summary: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
@@ -447,12 +428,12 @@ export class AIService {
     const startTime = Date.now();
     const interactionId = randomUUID();
     const templateId = 'completeness_validation_v1';
-    
+
     try {
       const templateData = this.buildCompletenessValidationData(caseData);
       const prompt = this.promptTemplateService.generatePrompt(templateId, templateData);
       const parameters = this.promptTemplateService.getTemplateParameters(templateId);
-      
+
       const response = await this.openRouterClient.makeRequest(prompt, parameters);
 
       // Validate response using template schema
@@ -469,7 +450,7 @@ export class AIService {
       }
 
       const completenessValidation = this.createCompletenessValidation(validation.data!);
-      
+
       // Log successful AI interaction
       await this.logAIInteraction({
         id: interactionId,
@@ -490,7 +471,7 @@ export class AIService {
     } catch (error) {
       const templateData = this.buildCompletenessValidationData(caseData);
       const prompt = this.promptTemplateService.generatePrompt(templateId, templateData);
-      
+
       // Log failed AI interaction
       await this.logAIInteraction({
         id: interactionId,
@@ -509,13 +490,13 @@ export class AIService {
       });
 
       // In development or test mode, provide fallback data if AI service is unavailable
-      if ((process.env.NODE_ENV === 'test') || (process.env.NODE_ENV === 'development' && error instanceof Error && 
-          (error.message.includes('401') || error.message.includes('OpenRouter API failed') || 
-           error.message.includes('Failed to validate case completeness') || error.message.includes('test-key') ||
-           error.message.includes('OpenRouter API failed after')))) { // Catch the specific error from OpenRouterClient
-        
+      if ((process.env.NODE_ENV === 'test') || (process.env.NODE_ENV === 'development' && error instanceof Error &&
+        (error.message.includes('401') || error.message.includes('OpenRouter API failed') ||
+          error.message.includes('Failed to validate case completeness') || error.message.includes('test-key') ||
+          error.message.includes('OpenRouter API failed after')))) { // Catch the specific error from OpenRouterClient
+
         console.warn('AI service unavailable in development/test mode, providing fallback data for case completeness validation');
-        
+
         // Return fallback completeness validation for development/test
         return this.createCompletenessValidation({
           isComplete: !!(caseData.applicationData && caseData.applicationData.applicantName && caseData.applicationData.applicantEmail),
@@ -530,7 +511,7 @@ export class AIService {
           confidence: 0.8
         });
       }
-      
+
       throw new Error(`Failed to validate case completeness: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
@@ -543,12 +524,12 @@ export class AIService {
     const interactionId = randomUUID();
     const caseId = 'temp-' + randomUUID(); // Temporary ID for logging
     const templateId = 'missing_fields_v1';
-    
+
     try {
       const templateData = this.buildMissingFieldsData(applicationData);
       const prompt = this.promptTemplateService.generatePrompt(templateId, templateData);
       const parameters = this.promptTemplateService.getTemplateParameters(templateId);
-      
+
       const response = await this.openRouterClient.makeRequest(prompt, parameters);
 
       // Validate response using template schema
@@ -569,7 +550,7 @@ export class AIService {
       }
 
       const analysis = this.createMissingFieldsAnalysis(validation.data!);
-      
+
       // Log successful AI interaction
       await this.logAIInteraction({
         id: interactionId,
@@ -590,7 +571,7 @@ export class AIService {
     } catch (error) {
       const templateData = this.buildMissingFieldsData(applicationData);
       const prompt = this.promptTemplateService.generatePrompt(templateId, templateData);
-      
+
       // Log failed AI interaction
       await this.logAIInteraction({
         id: interactionId,
@@ -609,13 +590,13 @@ export class AIService {
       });
 
       // In development or test mode, provide fallback data if AI service is unavailable
-      if ((process.env.NODE_ENV === 'test') || (process.env.NODE_ENV === 'development' && error instanceof Error && 
-          (error.message.includes('401') || error.message.includes('OpenRouter API failed') || 
-           error.message.includes('Failed to detect missing fields') || error.message.includes('test-key') ||
-           error.message.includes('OpenRouter API failed after')))) { // Catch the specific error from OpenRouterClient
-        
+      if ((process.env.NODE_ENV === 'test') || (process.env.NODE_ENV === 'development' && error instanceof Error &&
+        (error.message.includes('401') || error.message.includes('OpenRouter API failed') ||
+          error.message.includes('Failed to detect missing fields') || error.message.includes('test-key') ||
+          error.message.includes('OpenRouter API failed after')))) { // Catch the specific error from OpenRouterClient
+
         console.warn('AI service unavailable in development/test mode, providing fallback data for missing fields detection');
-        
+
         // Return fallback missing fields analysis for development/test
         return this.createMissingFieldsAnalysis({
           missingFields: [
@@ -647,7 +628,7 @@ export class AIService {
           estimatedCompletionTime: '2-3 business days'
         });
       }
-      
+
       throw new Error(`Failed to detect missing fields: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
