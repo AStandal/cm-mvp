@@ -205,6 +205,34 @@ export function setupIntegrationTestDatabase(testSuiteName?: string) {
 }
 
 /**
+ * Vitest hooks for API tests (file-based database with test data)
+ */
+export function setupAPITestDatabase(testSuiteName?: string) {
+  let cleanup: (() => Promise<void>) | null = null;
+  let manager: DatabaseManager | null = null;
+
+  return {
+    beforeAll: async () => {
+      const { manager: dbManager, cleanup: cleanupFn } = await TestDatabaseFactory.createFileDatabase(testSuiteName);
+      manager = dbManager;
+      cleanup = cleanupFn;
+    },
+    afterAll: async () => {
+      if (cleanup) {
+        await cleanup();
+      }
+    },
+    beforeEach: async () => {
+      // For API tests, reset the database for each test to ensure clean state
+      if (manager) {
+        await manager.initialize({ dropExisting: true, seedData: false });
+      }
+    },
+    getManager: () => manager
+  };
+}
+
+/**
  * Helper to determine test type based on file path or test name
  */
 export function getTestType(testFilePath: string): TestDatabaseType {
