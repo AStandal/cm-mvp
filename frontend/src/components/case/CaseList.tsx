@@ -52,6 +52,7 @@ const CaseList = () => {
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [sortField, setSortField] = useState('updatedAt');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
+  const [showSearch, setShowSearch] = useState(false);
 
   const { data, isLoading, error, refetch } = useCases({
     status: statusFilter || undefined,
@@ -147,43 +148,7 @@ const CaseList = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [currentPage, totalPages]);
 
-  // Keyboard shortcuts for sorting
-  React.useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
-        return; // Don't handle shortcuts when typing in inputs
-      }
-      
-      // Ctrl/Cmd + S for status sorting
-      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
-        e.preventDefault();
-        handleSortChange('status', sortDirection === 'asc' ? 'desc' : 'asc');
-      }
-      // Ctrl/Cmd + N for name sorting
-      else if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
-        e.preventDefault();
-        handleSortChange('applicantName', sortDirection === 'asc' ? 'desc' : 'asc');
-      }
-      // Ctrl/Cmd + D for date sorting
-      else if ((e.ctrlKey || e.metaKey) && e.key === 'd') {
-        e.preventDefault();
-        handleSortChange('submissionDate', sortDirection === 'asc' ? 'desc' : 'asc');
-      }
-      // Ctrl/Cmd + U for updated date sorting
-      else if ((e.ctrlKey || e.metaKey) && e.key === 'u') {
-        e.preventDefault();
-        handleSortChange('updatedAt', sortDirection === 'asc' ? 'desc' : 'asc');
-      }
-      // Ctrl/Cmd + R to reverse sort direction
-      else if ((e.ctrlKey || e.metaKey) && e.key === 'r') {
-        e.preventDefault();
-        handleSortChange(sortField, sortDirection === 'asc' ? 'desc' : 'asc');
-      }
-    };
 
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [sortField, sortDirection]);
 
   // Show error if there is one
   if (error) {
@@ -222,115 +187,163 @@ const CaseList = () => {
         </Link>
       </div>
 
-      {/* Filters and Search */}
-      <Card>
-        <div className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label htmlFor="search" className="block text-sm font-medium text-gray-700 mb-1">
-                Search Cases
-              </label>
-              <Input
-                id="search"
-                type="text"
-                placeholder="Search by name, type, or ID..."
-                value={searchTerm}
-                onChange={(e) => {
-                  setSearchTerm(e.target.value);
-                  setCurrentPage(1); // Reset to first page when searching
-                }}
-              />
-            </div>
-            <div>
-              <label htmlFor="status" className="block text-sm font-medium text-gray-700 mb-1">
-                Status Filter
-              </label>
-              <Select
-                id="status"
-                value={statusFilter}
-                onChange={handleStatusFilterChange}
-                options={statusOptions}
-              />
-            </div>
-            <div className="flex items-end">
-              {(searchTerm || statusFilter) ? (
-                <Button 
-                  variant="secondary" 
-                  className="w-full"
-                  onClick={() => {
-                    setSearchTerm('');
-                    setStatusFilter('');
-                    setCurrentPage(1);
-                  }}
-                >
-                  Clear Filters
-                </Button>
-              ) : (
-                <div className="w-full text-center text-sm text-gray-500 py-2">
-                  Search automatically as you type
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </Card>
-
-      {/* Sorting Controls */}
-      <Card>
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-4 sm:space-y-0">
-          <div>
-            <h3 className="text-lg font-medium text-gray-900 mb-2">Sort Cases</h3>
-            <p className="text-sm text-gray-600">Click any criteria to sort. Click again to reverse order.</p>
-          </div>
-          <div className="flex items-center space-x-2">
+      {/* Search & Sort Toggle Button */}
+      <div className="flex justify-center items-center space-x-4">
+        <Button
+          variant="secondary"
+          onClick={() => setShowSearch(!showSearch)}
+          className="flex items-center space-x-2"
+        >
+          {showSearch ? (
+            <>
+              <span>Hide Search & Sort</span>
+              <span>↑</span>
+            </>
+          ) : (
+            <>
+              <span>Search, Filters & Sort</span>
+              <span>↓</span>
+            </>
+          )}
+        </Button>
+        
+        {/* Active filters indicator */}
+        {(searchTerm || statusFilter || sortField !== 'updatedAt') && !showSearch && (
+          <div className="flex items-center space-x-2 text-sm text-gray-600">
+            <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
+            <span>Active filters & sorting</span>
             <Button
               variant="secondary"
               size="sm"
-              onClick={() => handleSortChange('updatedAt', 'desc')}
-              className="text-xs"
+              onClick={() => {
+                setSearchTerm('');
+                setStatusFilter('');
+                setSortField('updatedAt');
+                setSortDirection('desc');
+                setCurrentPage(1);
+              }}
+              className="text-xs px-2 py-1"
             >
-              Reset to Default
+              Clear All
             </Button>
           </div>
-        </div>
-        
-        {/* Sort Criteria Buttons */}
-        <div className="mt-4 flex flex-wrap gap-2">
-          {sortFields.map((field) => {
-            const isActive = sortField === field.value;
-            const isAscending = isActive && sortDirection === 'asc';
+        )}
+      </div>
+
+      {/* Filters, Search & Sorting - Collapsible */}
+      {showSearch && (
+        <div className="space-y-4">
+          {/* Search and Filters */}
+          <Card>
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label htmlFor="search" className="block text-sm font-medium text-gray-700 mb-1">
+                    Search Cases
+                  </label>
+                  <Input
+                    id="search"
+                    type="text"
+                    placeholder="Search by name, type, or ID..."
+                    value={searchTerm}
+                    onChange={(e) => {
+                      setSearchTerm(e.target.value);
+                      setCurrentPage(1); // Reset to first page when searching
+                    }}
+                  />
+                </div>
+                <div>
+                  <label htmlFor="status" className="block text-sm font-medium text-gray-700 mb-1">
+                    Status Filter
+                  </label>
+                  <Select
+                    id="status"
+                    value={statusFilter}
+                    onChange={handleStatusFilterChange}
+                    options={statusOptions}
+                  />
+                </div>
+                <div className="flex items-end">
+                  {(searchTerm || statusFilter) ? (
+                    <Button 
+                      variant="secondary" 
+                      className="w-full"
+                      onClick={() => {
+                        setSearchTerm('');
+                        setStatusFilter('');
+                        setCurrentPage(1);
+                      }}
+                    >
+                      Clear Filters
+                    </Button>
+                  ) : (
+                    <div className="w-full text-center text-sm text-gray-500 py-2">
+                      Search automatically as you type
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </Card>
+
+          {/* Sorting Controls */}
+          <Card>
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-4 sm:space-y-0">
+              <div>
+                <h3 className="text-lg font-medium text-gray-900 mb-2">Sort Cases</h3>
+                <p className="text-sm text-gray-600">Click any criteria to sort. Click again to reverse order.</p>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => handleSortChange('updatedAt', 'desc')}
+                  className="text-xs"
+                >
+                  Reset to Default
+                </Button>
+              </div>
+            </div>
             
-            return (
-              <Button
-                key={field.value}
-                variant={isActive ? 'primary' : 'secondary'}
-                size="sm"
-                onClick={() => {
-                  if (isActive) {
-                    // If already active, toggle direction
-                    handleSortChange(field.value, sortDirection === 'asc' ? 'desc' : 'asc');
-                  } else {
-                    // If not active, set as active with default direction (desc for most fields, asc for names)
-                    const defaultDirection = field.value === 'applicantName' ? 'asc' : 'desc';
-                    handleSortChange(field.value, defaultDirection);
-                  }
-                }}
-                className={`flex items-center justify-between ${
-                  isActive ? 'ring-2 ring-blue-500' : ''
-                }`}
-                title={`Sort by ${field.label}${isActive ? ` (${sortDirection === 'asc' ? 'A-Z' : 'Z-A'})` : ''}`}
-              >
-                <span className="truncate">{field.label}</span>
-                {isActive && (
-                  <span className="ml-2 text-sm">
-                    {isAscending ? '↑' : '↓'}
-                  </span>
-                )}
-              </Button>
-            );
-          })}
+            {/* Sort Criteria Buttons */}
+            <div className="mt-4 flex flex-wrap gap-2">
+              {sortFields.map((field) => {
+                const isActive = sortField === field.value;
+                const isAscending = isActive && sortDirection === 'asc';
+                
+                return (
+                  <Button
+                    key={field.value}
+                    variant={isActive ? 'primary' : 'secondary'}
+                    size="sm"
+                    onClick={() => {
+                      if (isActive) {
+                        // If already active, toggle direction
+                        handleSortChange(field.value, sortDirection === 'asc' ? 'desc' : 'asc');
+                      } else {
+                        // If not active, set as active with default direction (desc for most fields, asc for names)
+                        const defaultDirection = field.value === 'applicantName' ? 'asc' : 'desc';
+                        handleSortChange(field.value, defaultDirection);
+                      }
+                    }}
+                    className={`flex items-center justify-between ${
+                      isActive ? 'ring-2 ring-blue-500' : ''
+                    }`}
+                    title={`Sort by ${field.label}${isActive ? ` (${sortDirection === 'asc' ? 'A-Z' : 'Z-A'})` : ''}`}
+                  >
+                    <span className="truncate">{field.label}</span>
+                    {isActive && (
+                      <span className="ml-2 text-sm">
+                        {isAscending ? '↑' : '↓'}
+                      </span>
+                    )}
+                  </Button>
+                );
+              })}
+            </div>
+          </Card>
         </div>
-      </Card>
+      )}
 
       {/* Results Summary */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-2 sm:space-y-0">
