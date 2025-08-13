@@ -1,6 +1,7 @@
 import { beforeAll, afterAll, beforeEach } from 'vitest';
 import { setupAPITestDatabase } from '../utils/testDatabaseFactory.js';
-import { resetServices } from '@/routes/serviceFactory.js';
+import { resetServices, setServices, getServices } from '@/routes/serviceFactory.js';
+import { MockAIService } from '../mocks/MockAIService.js';
 
 // Use real services with test database instead of mocks
 let dbHooks: ReturnType<typeof setupAPITestDatabase>;
@@ -21,6 +22,14 @@ export function setupDatabaseHooks() {
     
     // Reset services to ensure they use the test database
     resetServices();
+    
+    // Replace AIService with mock for API tests
+    const services = getServices();
+    const mockAIService = new MockAIService();
+    setServices({
+      ...services,
+      aiService: mockAIService as any // Type assertion needed due to interface differences
+    });
   });
 
   afterAll(async () => {
