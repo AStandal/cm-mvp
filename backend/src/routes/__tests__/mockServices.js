@@ -61,6 +61,12 @@ export function createMockServices() {
       return Promise.resolve(null);
     }),
     getCasesByStatus: vi.fn().mockResolvedValue([]),
+    getAllCases: vi.fn().mockResolvedValue({
+      cases: [existingCase, mockCase],
+      total: 2,
+      page: 1,
+      limit: 10
+    }),
     
     // Private/utility methods that might be called
     validateApplicationData: vi.fn(),
