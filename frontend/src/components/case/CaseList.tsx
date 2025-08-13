@@ -196,7 +196,7 @@ const CaseList = () => {
         >
           {showSearch ? (
             <>
-              <span>Hide Search & Sort</span>
+              <span>Hide Search, Filters & Sort</span>
               <span>↑</span>
             </>
           ) : (
