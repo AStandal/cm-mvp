@@ -46,10 +46,10 @@ const CaseListItem = ({ caseData, sortField }: CaseListItemProps) => {
 
   return (
     <Link to={`/cases/${caseData.id}`} className="block">
-      <Card className="hover:shadow-lg transition-shadow duration-200 cursor-pointer">
+      <Card className="hover:shadow-lg hover:shadow-blue-100 transition-all duration-300 hover:scale-[1.02] cursor-pointer group">
         <div className="flex justify-between items-start mb-4">
           <div className="flex-1">
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+            <h3 className="text-lg font-semibold text-gray-900 mb-2 group-hover:text-blue-600 transition-colors duration-200">
               {caseData.applicationData.applicantName}
             </h3>
             <p className="text-sm text-gray-600 mb-2">
@@ -63,12 +63,14 @@ const CaseListItem = ({ caseData, sortField }: CaseListItemProps) => {
             <Badge 
               variant={getStatusVariant(caseData.status)} 
               size="sm"
+              className="transition-transform duration-200 group-hover:scale-105"
             >
               {caseData.status}
             </Badge>
             <Badge 
               variant={getStepVariant(caseData.currentStep)} 
               size="sm"
+              className="transition-transform duration-200 group-hover:scale-105"
             >
               {getStepLabel(caseData.currentStep)}
             </Badge>
@@ -77,10 +79,10 @@ const CaseListItem = ({ caseData, sortField }: CaseListItemProps) => {
         
         <div className="flex justify-between items-center text-sm text-gray-600">
           <div className="flex items-center space-x-4">
-            <span>
+            <span className="transition-colors duration-200 group-hover:text-blue-600">
               📄 {caseData.applicationData.documents.length} documents
             </span>
-            <span>
+            <span className="transition-colors duration-200 group-hover:text-blue-600">
               💬 {caseData.notes.length} notes
             </span>
           </div>

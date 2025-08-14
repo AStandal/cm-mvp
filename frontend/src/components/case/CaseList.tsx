@@ -28,19 +28,28 @@ const sortFields = [
 const CaseListSkeleton = ({ count = 5 }: { count?: number }) => (
   <div className="space-y-4">
     {Array.from({ length: count }).map((_, index) => (
-      <Card key={index} className="animate-pulse">
-        <div className="flex items-center justify-between p-4">
-          <div className="flex-1 space-y-3">
-            <div className="h-4 bg-gray-200 rounded w-1/4"></div>
-            <div className="h-3 bg-gray-200 rounded w-1/2"></div>
-            <div className="h-3 bg-gray-200 rounded w-1/3"></div>
+      <div
+        key={index}
+        className="animate-slide-up"
+        style={{
+          animationDelay: `${index * 100}ms`,
+          animationFillMode: 'both'
+        }}
+      >
+        <Card className="animate-pulse">
+          <div className="flex items-center justify-between p-4">
+            <div className="flex-1 space-y-3">
+              <div className="h-4 bg-gray-200 rounded w-1/4"></div>
+              <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+              <div className="h-3 bg-gray-200 rounded w-1/3"></div>
+            </div>
+            <div className="flex items-center space-x-2">
+              <div className="h-6 bg-gray-200 rounded w-16"></div>
+              <div className="h-6 bg-gray-200 rounded w-20"></div>
+            </div>
           </div>
-          <div className="flex items-center space-x-2">
-            <div className="h-6 bg-gray-200 rounded w-16"></div>
-            <div className="h-6 bg-gray-200 rounded w-20"></div>
-          </div>
-        </div>
-      </Card>
+        </Card>
+      </div>
     ))}
   </div>
 );
@@ -181,7 +190,7 @@ const CaseList = () => {
           </p>
         </div>
         <Link to="/cases/new">
-          <Button variant="primary">
+          <Button variant="primary" className="transition-all duration-200 hover:scale-105">
             Create New Case
           </Button>
         </Link>
@@ -192,7 +201,7 @@ const CaseList = () => {
         <Button
           variant="secondary"
           onClick={() => setShowSearch(!showSearch)}
-          className="flex items-center space-x-2"
+          className="flex items-center space-x-2 transition-all duration-200 hover:scale-105"
         >
           {showSearch ? (
             <>
@@ -209,7 +218,7 @@ const CaseList = () => {
         
         {/* Active filters indicator */}
         {(searchTerm || statusFilter || sortField !== 'updatedAt') && !showSearch && (
-          <div className="flex items-center space-x-2 text-sm text-gray-600">
+          <div className="flex items-center space-x-2 text-sm text-gray-600 animate-fade-in">
             <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
             <span>Active filters & sorting</span>
             <Button
@@ -222,7 +231,7 @@ const CaseList = () => {
                 setSortDirection('desc');
                 setCurrentPage(1);
               }}
-              className="text-xs px-2 py-1"
+              className="text-xs px-2 py-1 transition-all duration-200 hover:scale-105"
             >
               Clear All
             </Button>
@@ -231,119 +240,127 @@ const CaseList = () => {
       </div>
 
       {/* Filters, Search & Sorting - Collapsible */}
-      {showSearch && (
-        <div className="space-y-4">
-          {/* Search and Filters */}
-          <Card>
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <label htmlFor="search" className="block text-sm font-medium text-gray-700 mb-1">
-                    Search Cases
-                  </label>
-                  <Input
-                    id="search"
-                    type="text"
-                    placeholder="Search by name, type, or ID..."
-                    value={searchTerm}
-                    onChange={(e) => {
-                      setSearchTerm(e.target.value);
-                      setCurrentPage(1); // Reset to first page when searching
-                    }}
-                  />
-                </div>
-                <div>
-                  <label htmlFor="status" className="block text-sm font-medium text-gray-700 mb-1">
-                    Status Filter
-                  </label>
-                  <Select
-                    id="status"
-                    value={statusFilter}
-                    onChange={handleStatusFilterChange}
-                    options={statusOptions}
-                  />
-                </div>
-                <div className="flex items-end">
-                  {(searchTerm || statusFilter) ? (
-                    <Button 
-                      variant="secondary" 
-                      className="w-full"
-                      onClick={() => {
-                        setSearchTerm('');
-                        setStatusFilter('');
-                        setCurrentPage(1);
+      <div 
+        className={`overflow-hidden transition-all duration-300 ease-in-out ${
+          showSearch ? 'max-h-[1000px] opacity-100' : 'max-h-0 opacity-0'
+        }`}
+      >
+        <div className={`transform transition-transform duration-300 ease-in-out ${
+          showSearch ? 'translate-y-0' : '-translate-y-4'
+        }`}>
+          <div className="space-y-4">
+            {/* Search and Filters */}
+            <Card>
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label htmlFor="search" className="block text-sm font-medium text-gray-700 mb-1">
+                      Search Cases
+                    </label>
+                    <Input
+                      id="search"
+                      type="text"
+                      placeholder="Search by name, type, or ID..."
+                      value={searchTerm}
+                      onChange={(e) => {
+                        setSearchTerm(e.target.value);
+                        setCurrentPage(1); // Reset to first page when searching
                       }}
-                    >
-                      Clear Filters
-                    </Button>
-                  ) : (
-                    <div className="w-full text-center text-sm text-gray-500 py-2">
-                      Search automatically as you type
-                    </div>
-                  )}
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="status" className="block text-sm font-medium text-gray-700 mb-1">
+                      Status Filter
+                    </label>
+                    <Select
+                      id="status"
+                      value={statusFilter}
+                      onChange={handleStatusFilterChange}
+                      options={statusOptions}
+                    />
+                  </div>
+                  <div className="flex items-end">
+                    {(searchTerm || statusFilter) ? (
+                      <Button 
+                        variant="secondary" 
+                        className="w-full transition-all duration-200 hover:scale-105"
+                        onClick={() => {
+                          setSearchTerm('');
+                          setStatusFilter('');
+                          setCurrentPage(1);
+                        }}
+                      >
+                        Clear Filters
+                      </Button>
+                    ) : (
+                      <div className="w-full text-center text-sm text-gray-500 py-2">
+                        Search automatically as you type
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
-          </Card>
+            </Card>
 
-          {/* Sorting Controls */}
-          <Card>
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-4 sm:space-y-0">
-              <div>
-                <h3 className="text-lg font-medium text-gray-900 mb-2">Sort Cases</h3>
-                <p className="text-sm text-gray-600">Click any criteria to sort. Click again to reverse order.</p>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => handleSortChange('updatedAt', 'desc')}
-                  className="text-xs"
-                >
-                  Reset to Default
-                </Button>
-              </div>
-            </div>
-            
-            {/* Sort Criteria Buttons */}
-            <div className="mt-4 flex flex-wrap gap-2">
-              {sortFields.map((field) => {
-                const isActive = sortField === field.value;
-                const isAscending = isActive && sortDirection === 'asc';
-                
-                return (
+            {/* Sorting Controls */}
+            <Card>
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-4 sm:space-y-0">
+                <div>
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">Sort Cases</h3>
+                  <p className="text-sm text-gray-600">Click any criteria to sort. Click again to reverse order.</p>
+                </div>
+                <div className="flex items-center space-x-2">
                   <Button
-                    key={field.value}
-                    variant={isActive ? 'primary' : 'secondary'}
+                    variant="secondary"
                     size="sm"
-                    onClick={() => {
-                      if (isActive) {
-                        // If already active, toggle direction
-                        handleSortChange(field.value, sortDirection === 'asc' ? 'desc' : 'asc');
-                      } else {
-                        // If not active, set as active with default direction (desc for most fields, asc for names)
-                        const defaultDirection = field.value === 'applicantName' ? 'asc' : 'desc';
-                        handleSortChange(field.value, defaultDirection);
-                      }
-                    }}
-                    className={`flex items-center justify-between ${
-                      isActive ? 'ring-2 ring-blue-500' : ''
-                    }`}
-                    title={`Sort by ${field.label}${isActive ? ` (${sortDirection === 'asc' ? 'A-Z' : 'Z-A'})` : ''}`}
+                    onClick={() => handleSortChange('updatedAt', 'desc')}
+                    className="text-xs transition-all duration-200 hover:scale-105"
                   >
-                    <span className="truncate">{field.label}</span>
-                    {isActive && (
-                      <span className="ml-2 text-sm">
-                        {isAscending ? '↑' : '↓'}
-                      </span>
-                    )}
+                    Reset to Default
                   </Button>
-                );
-              })}
-            </div>
-          </Card>
+                </div>
+              </div>
+              
+              {/* Sort Criteria Buttons */}
+              <div className="mt-4 flex flex-wrap gap-2">
+                {sortFields.map((field) => {
+                  const isActive = sortField === field.value;
+                  const isAscending = isActive && sortDirection === 'asc';
+                  
+                  return (
+                    <Button
+                      key={field.value}
+                      variant={isActive ? 'primary' : 'secondary'}
+                      size="sm"
+                      onClick={() => {
+                        if (isActive) {
+                          // If already active, toggle direction
+                          handleSortChange(field.value, sortDirection === 'asc' ? 'desc' : 'asc');
+                        } else {
+                          // If not active, set as active with default direction (desc for most fields, asc for names)
+                          const defaultDirection = field.value === 'applicantName' ? 'asc' : 'desc';
+                          handleSortChange(field.value, defaultDirection);
+                        }
+                      }}
+                      className={`flex items-center justify-between transition-all duration-200 ${
+                        isActive ? 'ring-2 ring-blue-500 scale-105' : 'hover:scale-102'
+                      }`}
+                      title={`Sort by ${field.label}${isActive ? ` (${sortDirection === 'asc' ? 'A-Z' : 'Z-A'})` : ''}`}
+                    >
+                      <span className="truncate">{field.label}</span>
+                      {isActive && (
+                        <span className="ml-2 text-sm">
+                          {isAscending ? '↑' : '↓'}
+                        </span>
+                      )}
+                    </Button>
+                  );
+                })}
+              </div>
+            </Card>
+          </div>
         </div>
-      )}
+      </div>
 
       {/* Results Summary */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-2 sm:space-y-0">
@@ -384,7 +401,7 @@ const CaseList = () => {
                 { value: '20', label: '20' },
                 { value: '50', label: '50' },
               ]}
-              className="w-16"
+              className="w-16 transition-all duration-200 hover:scale-105"
             />
           </div>
           
@@ -403,27 +420,38 @@ const CaseList = () => {
         fallback={<CaseListSkeleton count={itemsPerPage} />}
       >
                 {data?.cases.length === 0 ? (
-          <Card className="text-center py-12">
-            <div className="text-gray-500">
-              <p className="text-lg font-medium mb-2">No cases found</p>
-              <p className="text-sm">
-                {searchTerm || statusFilter 
-                  ? 'Try adjusting your search criteria or filters'
-                  : 'No cases have been created yet'
-                }
-              </p>
-              {!searchTerm && !statusFilter && (
-                <Link to="/cases/new" className="inline-block mt-4">
-                  <Button variant="primary">Create Your First Case</Button>
-                </Link>
-              )}
+          <div className="animate-fade-in">
+            <Card className="text-center py-12">
+              <div className="text-gray-500">
+                <p className="text-lg font-medium mb-2">No cases found</p>
+                <p className="text-sm">
+                  {searchTerm || statusFilter 
+                    ? 'Try adjusting your search criteria or filters'
+                    : 'No cases have been created yet'
+                  }
+                </p>
+                {!searchTerm && !statusFilter && (
+                  <Link to="/cases/new" className="inline-block mt-4">
+                    <Button variant="primary" className="transition-all duration-200 hover:scale-105">Create Your First Case</Button>
+                  </Link>
+                )}
 
-            </div>
-          </Card>
+              </div>
+            </Card>
+          </div>
         ) : (
           <div className="space-y-4">
-            {data?.cases.map((caseData) => (
-              <CaseListItem key={caseData.id} caseData={caseData} sortField={sortField} />
+            {data?.cases.map((caseData, index) => (
+              <div
+                key={caseData.id}
+                className="animate-slide-up"
+                style={{
+                  animationDelay: `${index * 50}ms`,
+                  animationFillMode: 'both'
+                }}
+              >
+                <CaseListItem caseData={caseData} sortField={sortField} />
+              </div>
             ))}
           </div>
         )}
@@ -457,7 +485,7 @@ const CaseList = () => {
               onClick={() => handlePageChange(1)}
               disabled={currentPage === 1 || isLoading}
               size="sm"
-              className="px-2"
+              className="px-2 transition-all duration-200 hover:scale-105"
               title="Go to first page"
               aria-label="Go to first page"
             >
@@ -469,6 +497,7 @@ const CaseList = () => {
               onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
               disabled={currentPage === 1 || isLoading}
               size="sm"
+              className="transition-all duration-200 hover:scale-105"
               aria-label="Go to previous page"
             >
               Previous
@@ -488,7 +517,7 @@ const CaseList = () => {
                         key={i}
                         variant={currentPage === i ? 'primary' : 'secondary'}
                         onClick={() => handlePageChange(i)}
-                        className="w-8 h-8 p-0 text-sm"
+                        className="w-8 h-8 p-0 text-sm transition-all duration-200 hover:scale-105"
                         size="sm"
                         disabled={isLoading}
                         aria-label={`Go to page ${i}`}
@@ -536,7 +565,7 @@ const CaseList = () => {
                         key={i}
                         variant={currentPage === i ? 'primary' : 'secondary'}
                         onClick={() => handlePageChange(i)}
-                        className="w-8 h-8 p-0 text-sm"
+                        className="w-8 h-8 p-0 text-sm transition-all duration-200 hover:scale-105"
                         size="sm"
                         disabled={isLoading}
                         aria-label={`Go to page ${i}`}
@@ -583,6 +612,7 @@ const CaseList = () => {
               onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
               disabled={currentPage === totalPages || isLoading}
               size="sm"
+              className="transition-all duration-200 hover:scale-105"
               aria-label="Go to next page"
             >
               Next
@@ -594,7 +624,7 @@ const CaseList = () => {
               onClick={() => handlePageChange(totalPages)}
               disabled={currentPage === totalPages || isLoading}
               size="sm"
-              className="px-2"
+              className="px-2 transition-all duration-200 hover:scale-105"
               title="Go to last page"
               aria-label="Go to last page"
             >
@@ -612,7 +642,7 @@ const CaseList = () => {
                 max={totalPages}
                 value={currentPage}
                 onChange={(e) => handleGoToPage(e.target.value)}
-                className="w-16 h-8 text-sm text-center"
+                className="w-16 h-8 text-sm text-center transition-all duration-200 hover:scale-105 focus:scale-105"
                 disabled={isLoading}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
