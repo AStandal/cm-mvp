@@ -6,33 +6,21 @@
  */
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { setupTestDatabase, cleanupTestDatabase } from './api/setup.js';
+import { setupDatabaseHooks } from './api/setup.js';
 import { getTestSuiteSummary } from './api/index.js';
 
 describe('API Test Suite', () => {
+    // Setup database hooks for all API tests
+    setupDatabaseHooks();
+
     beforeAll(async () => {
         // Set up test environment
         process.env.NODE_ENV = 'test';
-
-        // Try to initialize test database (optional for API tests)
-        try {
-            await setupTestDatabase();
-            console.log('🧪 API Test Suite initialized with database');
-        } catch (error) {
-            console.log('🧪 API Test Suite initialized without database (expected during development)');
-        }
-
+        console.log('🧪 API Test Suite initialized with database');
         console.log('📊 Test Suite Summary:', getTestSuiteSummary());
     });
 
     afterAll(async () => {
-        // Clean up test database if it was created
-        try {
-            await cleanupTestDatabase();
-        } catch (error) {
-            // Ignore cleanup errors
-        }
-
         console.log('✅ API Test Suite completed');
     });
 

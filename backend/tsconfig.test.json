@@ -6,16 +6,13 @@
     "noUnusedParameters": false,
     "skipLibCheck": true,
     "exactOptionalPropertyTypes": false,
-    "types": ["vitest/globals", "node", "@testing-library/jest-dom"]
+    "types": ["vitest/globals", "node", "@types/supertest"]
   },
   "include": [
     "src/**/*.test.ts",
-    "src/**/*.test.tsx",
     "src/**/*.spec.ts",
-    "src/**/*.spec.tsx",
     "src/**/test*.ts",
-    "src/**/__tests__/**/*.ts",
-    "src/**/__tests__/**/*.tsx"
+    "src/**/__tests__/**/*.ts"
   ],
   "exclude": [
     "node_modules",

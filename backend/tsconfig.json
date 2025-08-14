@@ -23,6 +23,7 @@
     "declarationMap": true,
     "sourceMap": true,
     "baseUrl": ".",
+    "types": ["vitest/globals"],
     "paths": {
       "@/*": ["./src/*"],
       "@/types": ["./src/types"],
@@ -33,5 +34,12 @@
     }
   },
   "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "**/*.test.ts", "**/*.spec.ts"]
+  "exclude": [
+    "node_modules", 
+    "dist",
+    "src/**/*.test.ts",
+    "src/**/*.spec.ts",
+    "src/**/test*.ts",
+    "src/**/__tests__/**/*"
+  ]
 }

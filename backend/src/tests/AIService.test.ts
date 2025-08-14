@@ -21,8 +21,8 @@ vi.mock('../services/DataService.js');
 
 describe('AIService', () => {
     let aiService: AIService;
-    let mockOpenRouterClient: vi.Mocked<OpenRouterClient>;
-    let mockDataService: vi.Mocked<DataService>;
+    let mockOpenRouterClient: ReturnType<typeof vi.mocked<OpenRouterClient>>;
+    let mockDataService: ReturnType<typeof vi.mocked<DataService>>;
 
     const mockApplicationData: ApplicationData = {
         applicantName: 'John Doe',
