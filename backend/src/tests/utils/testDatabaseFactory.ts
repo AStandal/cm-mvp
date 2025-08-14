@@ -35,6 +35,10 @@ export class TestDatabaseFactory {
     let connection: DatabaseConnection;
     let manager: DatabaseManager;
 
+    // First, reset any existing instances to avoid conflicts
+    DatabaseConnection.resetInstance();
+    DatabaseConnection.resetAllTestInstances();
+
     if (config.type === 'memory') {
       // In-memory database for unit tests
       dbPath = ':memory:';
@@ -55,7 +59,8 @@ export class TestDatabaseFactory {
       connection = DatabaseConnection.getInstance(dbPath);
     }
 
-    // Initialize database manager
+    // Initialize database manager AFTER setting up the connection
+    // This ensures the manager uses the test database connection
     manager = new DatabaseManager();
     
     if (config.migrations !== false) {
@@ -116,17 +121,25 @@ export class TestDatabaseFactory {
     const manager = this.managers.get(instanceKey);
 
     if (manager) {
-      manager.close();
+      try {
+        manager.close();
+      } catch (error) {
+        console.warn(`Warning: Error closing database manager:`, error);
+      }
       this.managers.delete(instanceKey);
     }
 
     if (connection) {
-      connection.close();
+      try {
+        connection.close();
+      } catch (error) {
+        console.warn(`Warning: Error closing database connection:`, error);
+      }
       this.instances.delete(instanceKey);
-      
-      // Reset the main singleton instance since we replaced it for tests
-      DatabaseConnection.resetInstance();
     }
+
+    // Reset the main singleton instance since we replaced it for tests
+    DatabaseConnection.resetInstance();
 
     // Remove file-based test database
     if (dbPath !== ':memory:' && fs.existsSync(dbPath)) {

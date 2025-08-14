@@ -788,6 +788,7 @@ function createTestActivity(caseId: string): ActivityLog {
     id: randomUUID(),
     caseId,
     action: 'case_created',
+    details: { source: 'test' },
     userId: 'test-user',
     timestamp: new Date()
   };
@@ -795,11 +796,14 @@ function createTestActivity(caseId: string): ActivityLog {
 
 function createTestApplicationAnalysis(): ApplicationAnalysis {
   return {
-    completenessScore: 0.9,
-    riskLevel: 'low',
+    summary: 'Test application analysis',
+    keyPoints: ['Key point 1', 'Key point 2'],
+    potentialIssues: ['Issue 1'],
     recommendedActions: ['Review documents', 'Verify information'],
-    keyFindings: ['All required fields present', 'Valid email format'],
-    confidence: 0.85
+    priorityLevel: 'low',
+    estimatedProcessingTime: '2-3 business days',
+    requiredDocuments: ['ID', 'Proof of address'],
+    analysisTimestamp: new Date()
   };
 }
 
@@ -807,7 +811,8 @@ function createTestMissingFieldsAnalysis(): MissingFieldsAnalysis {
   return {
     missingFields: [],
     completenessScore: 0.95,
-    recommendations: ['Application is complete'],
-    criticalFieldsMissing: false
+    priorityActions: ['Application is complete'],
+    estimatedCompletionTime: 'N/A - Complete',
+    analysisTimestamp: new Date()
   };
 }

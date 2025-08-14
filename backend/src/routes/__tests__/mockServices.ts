@@ -70,6 +70,11 @@ export function createMockServices() {
   };
 
   const mockCaseService = {
+    // Required service dependencies
+    dataService: mockDataService,
+    aiService: mockAIService,
+    
+    // Public methods
     createCaseWithoutAI: vi.fn().mockResolvedValue(mockCase),
     createCase: vi.fn().mockResolvedValue(mockCase),
     processApplication: vi.fn().mockResolvedValue({
@@ -107,7 +112,7 @@ export function createMockServices() {
     generateMissingFieldsNote: vi.fn().mockReturnValue(''),
     isValidEmail: vi.fn().mockReturnValue(true),
     logActivity: vi.fn().mockResolvedValue(undefined)
-  };
+  } as any;
 
   return {
     caseService: mockCaseService,
