@@ -26,6 +26,9 @@ describe('DataService', () => {
     // Set test environment
     process.env.NODE_ENV = 'test';
     
+    // Initialize database manager
+    dbManager = new DatabaseManager();
+    
     // Reset services to ensure they use the test database
     const { resetServices, getServices } = await import('../routes/serviceFactory.js');
     resetServices();
@@ -1088,7 +1091,7 @@ function createTestCase(): Case {
   };
 }
 
-function createTestAISummary(caseId: string): AISummaryModel {
+function createTestAISummary(caseId: string): AISummary {
   return {
     id: randomUUID(),
     caseId,
@@ -1106,6 +1109,7 @@ function createTestActivity(caseId: string): ActivityLog {
     id: randomUUID(),
     caseId,
     action: 'case_created',
+    details: { source: 'test' },
     userId: 'test-user',
     timestamp: new Date()
   };
