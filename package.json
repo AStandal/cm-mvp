@@ -4,6 +4,9 @@
   "description": "AI-powered case management system with automated processing and intelligent recommendations",
   "type": "module",
   "scripts": {
+    "typecheck:all": "npm run typecheck:backend && npm run typecheck:frontend",
+    "typecheck:backend": "cd backend && npm run typecheck && npm run typecheck:tests",
+    "typecheck:frontend": "cd frontend && npm run typecheck && npm run typecheck:tests",
     "verify": "npm run verify:backend && npm run verify:frontend",
     "verify:backend": "cd backend && npm run verify",
     "verify:frontend": "cd frontend && npm run verify",

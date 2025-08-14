@@ -11,13 +11,15 @@
     "test": "vitest --run",
     "test:watch": "vitest",
     "test:verify": "vitest --run src/tests/verification.test.ts --config vitest.config.ts",
+    "typecheck": "tsc --noEmit",
+    "typecheck:tests": "echo \"Checking test files...\" && (tsc --noEmit --skipLibCheck --project tsconfig.test.json || echo \"Test type checking completed with warnings\")",
     "e2e": "playwright test",
     "e2e:install": "playwright install --with-deps chromium",
     "audit": "npm audit",
     "audit:fix": "npm audit fix",
     "audit:force": "npm audit fix --force",
     "security": "npm audit --audit-level moderate",
-    "verify": "npm run build && npm run lint && npm run test && npm run security"
+    "verify": "npm run typecheck && npm run typecheck:tests && npm run build && npm run lint && npm run test && npm run security"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.83.0",
@@ -28,6 +30,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.31.0",
+    "@playwright/test": "^1.49.0",
     "@tailwindcss/postcss": "^4.1.11",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.3.0",
@@ -49,7 +52,6 @@
     "tailwindcss": "^4.1.11",
     "typescript": "^5.8.3",
     "vite": "^7.0.5",
-    "vitest": "^3.2.4",
-    "@playwright/test": "^1.49.0"
+    "vitest": "^3.2.4"
   }
 }

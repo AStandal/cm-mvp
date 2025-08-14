@@ -1,3 +1,5 @@
+/// <reference types="vitest" />
+/// <reference types="vitest/globals" />
 import { defineConfig } from 'vitest/config';
 import path from 'path';
 
@@ -23,6 +25,11 @@ export default defineConfig({
     globals: true,
     // Test isolation for API tests
     isolate: true,
+    // Enable TypeScript type checking in tests
+    typecheck: {
+      enabled: true,
+      tsconfig: './tsconfig.test.json',
+    },
     // Coverage configuration
     coverage: {
       provider: 'v8',
@@ -36,7 +43,7 @@ export default defineConfig({
       ],
     },
     // Reporter configuration for better API test output
-    reporter: ['verbose'],
+    reporters: ['verbose'],
   },
   resolve: {
     alias: {
