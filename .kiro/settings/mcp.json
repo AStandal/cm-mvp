@@ -13,6 +13,14 @@
       "command": "npx",
       "args": [
         "@playwright/mcp@latest"
+      ],
+      "disabled": false,
+      "autoApprove": [
+        "browser_navigate",
+        "browser_network_requests",
+        "browser_console_messages",
+        "browser_snapshot",
+        "browser_wait_for"
       ]
     }
   }

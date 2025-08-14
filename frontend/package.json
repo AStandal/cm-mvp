@@ -12,6 +12,7 @@
     "test:watch": "vitest",
     "test:verify": "vitest --run src/tests/verification.test.ts --config vitest.config.ts",
     "e2e": "playwright test",
+    "e2e:install": "playwright install --with-deps chromium",
     "audit": "npm audit",
     "audit:fix": "npm audit fix",
     "audit:force": "npm audit fix --force",
