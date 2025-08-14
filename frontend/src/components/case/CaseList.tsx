@@ -454,7 +454,7 @@ const CaseList = () => {
                   animationFillMode: 'both'
                 }}
               >
-                <CaseListItem caseData={caseData} sortField={sortField} />
+                <CaseListItem caseData={caseData} />
               </div>
             ))}
           </div>

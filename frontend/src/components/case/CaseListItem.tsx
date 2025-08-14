@@ -6,10 +6,9 @@ import { formatDate } from '@/utils/formatting';
 
 interface CaseListItemProps {
   caseData: Case;
-  sortField?: string;
 }
 
-const CaseListItem = ({ caseData, sortField }: CaseListItemProps) => {
+const CaseListItem = ({ caseData }: CaseListItemProps) => {
   const getStatusVariant = (status: CaseStatus): 'default' | 'success' | 'warning' | 'danger' | 'info' => {
     switch (status) {
       case CaseStatus.APPROVED:
