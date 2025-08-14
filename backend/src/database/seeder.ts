@@ -4,24 +4,50 @@ import { v4 as uuidv4 } from 'uuid';
 
 export class DatabaseSeeder {
   private db: DatabaseConnection;
+  private recordCount: number;
 
-  constructor() {
+  constructor(recordCount: number = 20) {
     this.db = DatabaseConnection.getInstance();
+    this.recordCount = recordCount;
+  }
+
+  /**
+   * Create a minimal seeder for tests with only a few records
+   */
+  static createTestSeeder(): DatabaseSeeder {
+    return new DatabaseSeeder(5);
+  }
+
+  /**
+   * Create a seeder for development with moderate amount of data
+   */
+  static createDevSeeder(): DatabaseSeeder {
+    return new DatabaseSeeder(100);
+  }
+
+  /**
+   * Create a seeder for production with full dataset
+   */
+  static createProductionSeeder(): DatabaseSeeder {
+    return new DatabaseSeeder(1000);
   }
 
   public async seedDatabase(): Promise<void> {
-    console.log('Seeding database with sample data...');
+    console.log(`Seeding database with ${this.recordCount} sample records...`);
 
     try {
-      // Insert data in order to satisfy foreign key constraints
-      // 1. First insert cases (no dependencies)
-      this.seedCases();
-      
-      // 2. Then insert dependent tables (all reference cases.id)
-      this.seedAISummaries();
-      this.seedCaseNotes();
-      this.seedAuditTrail();
-      this.seedAIInteractions();
+      // Use a single transaction for all seeding operations
+      this.db.transaction(() => {
+        // Insert data in order to satisfy foreign key constraints
+        // 1. First insert cases (no dependencies)
+        this.seedCases();
+        
+        // 2. Then insert dependent tables (all reference cases.id)
+        this.seedAISummaries();
+        this.seedCaseNotes();
+        this.seedAuditTrail();
+        this.seedAIInteractions();
+      });
       
       console.log('Database seeding completed successfully');
     } catch (error) {
@@ -108,7 +134,7 @@ export class DatabaseSeeder {
       'Gundersen', 'Ødegård', 'Haugland', 'Sandvik', 'Bakken', 'Holm', 'Vik', 'Haug', 'Berglund'
     ];
     
-    for (let i = 1; i <= 1000; i++) {
+    for (let i = 1; i <= this.recordCount; i++) {
       const caseNum = i.toString().padStart(4, '0');
       const applicationType = applicationTypes[i % applicationTypes.length];
       const isBusinessLicense = applicationType === 'Business License';
@@ -196,12 +222,14 @@ export class DatabaseSeeder {
       cases.push(caseData);
     }
 
+    // Use a single prepared statement for all inserts
     const stmt = this.db.prepare(`
       INSERT OR IGNORE INTO cases (id, application_data, status, current_step, created_at, updated_at, assigned_to)
       VALUES (?, ?, ?, ?, ?, ?, ?)
     `);
 
-    cases.forEach(caseData => {
+    // Execute all inserts in a batch
+    for (const caseData of cases) {
       stmt.run(
         caseData.id,
         caseData.application_data,
@@ -211,9 +239,9 @@ export class DatabaseSeeder {
         caseData.updated_at,
         caseData.assigned_to
       );
-    });
+    }
 
-    console.log('Seeded cases table');
+    console.log(`Seeded cases table with ${cases.length} records`);
   }
 
   private seedAISummaries(): void {
@@ -248,7 +276,7 @@ export class DatabaseSeeder {
       'Safety inspection scheduling recommended.'
     ];
     
-    for (let i = 1; i <= 1000; i++) {
+    for (let i = 1; i <= this.recordCount; i++) {
       const caseNum = i.toString().padStart(4, '0');
       const caseId = `case-${caseNum}`;
       
@@ -314,12 +342,14 @@ export class DatabaseSeeder {
       });
     }
 
+    // Use a single prepared statement for all inserts
     const stmt = this.db.prepare(`
       INSERT OR IGNORE INTO ai_summaries (id, case_id, type, step, content, recommendations, confidence, generated_at, version)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
-    summaries.forEach(summary => {
+    // Execute all inserts in a batch
+    for (const summary of summaries) {
       stmt.run(
         summary.id,
         summary.case_id,
@@ -331,9 +361,9 @@ export class DatabaseSeeder {
         summary.generated_at,
         summary.version
       );
-    });
+    }
 
-    console.log('Seeded ai_summaries table');
+    console.log(`Seeded ai_summaries table with ${summaries.length} records`);
   }
 
   private seedCaseNotes(): void {
@@ -391,7 +421,7 @@ export class DatabaseSeeder {
       'Renovation plans demonstrate understanding of historical preservation requirements.'
     ];
     
-    for (let i = 1; i <= 1000; i++) {
+    for (let i = 1; i <= this.recordCount; i++) {
       const caseNum = i.toString().padStart(4, '0');
       const caseId = `case-${caseNum}`;
       
@@ -435,22 +465,24 @@ export class DatabaseSeeder {
       });
     }
 
+    // Use a single prepared statement for all inserts
     const stmt = this.db.prepare(`
       INSERT OR IGNORE INTO case_notes (id, case_id, content, created_by, created_at)
       VALUES (?, ?, ?, ?, ?)
     `);
 
-    notes.forEach(note => {
+    // Execute all inserts in a batch
+    for (const note of notes) {
       stmt.run(note.id, note.case_id, note.content, note.created_by, note.created_at);
-    });
+    }
 
-    console.log('Seeded case_notes table');
+    console.log(`Seeded case_notes table with ${notes.length} records`);
   }
 
   private seedAuditTrail(): void {
     const auditEntries = [];
     
-    for (let i = 1; i <= 1000; i++) {
+    for (let i = 1; i <= this.recordCount; i++) {
       const caseNum = i.toString().padStart(4, '0');
       const caseId = `case-${caseNum}`;
       
@@ -494,16 +526,18 @@ export class DatabaseSeeder {
       });
     }
 
+    // Use a single prepared statement for all inserts
     const stmt = this.db.prepare(`
       INSERT OR IGNORE INTO audit_trail (id, case_id, action, details, user_id, timestamp)
       VALUES (?, ?, ?, ?, ?, ?)
     `);
 
-    auditEntries.forEach(entry => {
+    // Execute all inserts in a batch
+    for (const entry of auditEntries) {
       stmt.run(entry.id, entry.case_id, entry.action, entry.details, entry.user_id, entry.timestamp);
-    });
+    }
 
-    console.log('Seeded audit_trail table');
+    console.log(`Seeded audit_trail table with ${auditEntries.length} records`);
   }
 
   private seedAIInteractions(): void {
@@ -511,7 +545,7 @@ export class DatabaseSeeder {
     const operations = ['generate_summary', 'generate_recommendation', 'analyze_application', 'validate_compliance', 'assess_risk'];
     const models = ['grok-beta', 'claude-3-opus', 'gpt-4', 'llama-3', 'gemini-pro'];
     
-    for (let i = 1; i <= 1000; i++) {
+    for (let i = 1; i <= this.recordCount; i++) {
       const caseNum = i.toString().padStart(4, '0');
       const caseId = `case-${caseNum}`;
       
@@ -564,12 +598,14 @@ export class DatabaseSeeder {
       });
     }
 
+    // Use a single prepared statement for all inserts
     const stmt = this.db.prepare(`
       INSERT OR IGNORE INTO ai_interactions (id, case_id, operation, prompt, response, model, tokens_used, cost, duration, success, error, timestamp)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
-    interactions.forEach(interaction => {
+    // Execute all inserts in a batch
+    for (const interaction of interactions) {
       stmt.run(
         interaction.id,
         interaction.case_id,
@@ -584,9 +620,9 @@ export class DatabaseSeeder {
         interaction.error,
         interaction.timestamp
       );
-    });
+    }
 
-    console.log('Seeded ai_interactions table');
+    console.log(`Seeded ai_interactions table with ${interactions.length} records`);
   }
 
   public async clearDatabase(): Promise<void> {

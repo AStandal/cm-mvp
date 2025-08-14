@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import request from 'supertest';
-// Import setup first to ensure mocks are applied before importing the app
-import { setupDatabaseHooks } from './setup.js';
+// Import setup first to ensure database is configured before importing the app
+import { setupDatabaseHooks, testDataHelpers } from './setup.js';
 import app from '@/index.js';
 
 describe('API Tests - Case Management Endpoints', () => {
@@ -190,6 +190,9 @@ describe('API Tests - Case Management Endpoints', () => {
     });
 
     it('should validate case ID parameter', async () => {
+      // Create some test cases first
+      await testDataHelpers.createMultipleTestCases(2);
+
       const response = await request(app)
         .get('/api/cases/')
         .expect(200); // This now hits the GET /api/cases route
@@ -203,6 +206,9 @@ describe('API Tests - Case Management Endpoints', () => {
           limit: 10
         }
       });
+
+      // Should have the test cases we created
+      expect(response.body.data.total).toBe(2);
     });
 
     it('should handle URL parameters correctly', async () => {
@@ -487,28 +493,16 @@ describe('API Tests - Case Management Endpoints', () => {
     });
 
     it('should generate AI summary for existing case', async () => {
-      // First create a case
-      const newCase = {
-        applicationData: {
-          applicantName: 'Test User',
-          applicantEmail: 'test@example.com',
-          applicationType: 'standard',
-          submissionDate: new Date().toISOString(),
-          documents: [],
-          formData: {}
-        }
-      };
-
-      const createResponse = await request(app)
-        .post('/api/cases')
-        .send(newCase)
-        .expect(201);
-
-      const caseId = createResponse.body.data.case.id;
+      // Create a test case using our helper
+      const testCase = await testDataHelpers.createTestCase({
+        applicantName: 'Test User',
+        applicantEmail: 'test@example.com',
+        applicationType: 'standard'
+      });
 
       // Get AI summary for the case
       const response = await request(app)
-        .get(`/api/cases/${caseId}/ai-summary`)
+        .get(`/api/cases/${testCase.id}/ai-summary`)
         .expect(200);
 
       expect(response.body).toMatchObject({
@@ -516,7 +510,7 @@ describe('API Tests - Case Management Endpoints', () => {
         data: {
           aiSummary: expect.objectContaining({
             id: expect.any(String),
-            caseId: caseId,
+            caseId: testCase.id,
             type: 'overall',
             content: expect.any(String),
             recommendations: expect.any(Array),
@@ -545,28 +539,16 @@ describe('API Tests - Case Management Endpoints', () => {
     });
 
     it('should refresh AI insights for existing case', async () => {
-      // First create a case
-      const newCase = {
-        applicationData: {
-          applicantName: 'Test User',
-          applicantEmail: 'test@example.com',
-          applicationType: 'standard',
-          submissionDate: new Date().toISOString(),
-          documents: [],
-          formData: {}
-        }
-      };
-
-      const createResponse = await request(app)
-        .post('/api/cases')
-        .send(newCase)
-        .expect(201);
-
-      const caseId = createResponse.body.data.case.id;
+      // Create a test case using our helper
+      const testCase = await testDataHelpers.createTestCase({
+        applicantName: 'Test User',
+        applicantEmail: 'test@example.com',
+        applicationType: 'standard'
+      });
 
       // Refresh AI insights for the case
       const response = await request(app)
-        .post(`/api/cases/${caseId}/ai-refresh`)
+        .post(`/api/cases/${testCase.id}/ai-refresh`)
         .send({})
         .expect(200);
 
@@ -575,7 +557,7 @@ describe('API Tests - Case Management Endpoints', () => {
         data: {
           aiSummary: expect.objectContaining({
             id: expect.any(String),
-            caseId: caseId,
+            caseId: testCase.id,
             type: 'overall',
             content: expect.any(String),
             recommendations: expect.any(Array),
@@ -604,6 +586,9 @@ describe('API Tests - Case Management Endpoints', () => {
 
   describe('GET /api/cases', () => {
     it('should retrieve all cases with default pagination', async () => {
+      // Create some test cases first
+      await testDataHelpers.createMultipleTestCases(3);
+
       const response = await request(app)
         .get('/api/cases')
         .expect(200);
@@ -617,11 +602,18 @@ describe('API Tests - Case Management Endpoints', () => {
           limit: 10
         }
       });
+
+      // Should have the test cases we created
+      expect(response.body.data.total).toBe(3);
+      expect(response.body.data.cases).toHaveLength(3);
     });
 
     it('should handle query parameters for pagination and filtering', async () => {
+      // Create some test cases first
+      await testDataHelpers.createMultipleTestCases(5);
+
       const response = await request(app)
-        .get('/api/cases?status=active&page=1&limit=10')
+        .get('/api/cases?status=active&page=1&limit=3')
         .expect(200);
 
       expect(response.body).toMatchObject({
@@ -630,14 +622,20 @@ describe('API Tests - Case Management Endpoints', () => {
           cases: expect.any(Array),
           total: expect.any(Number),
           page: 1,
-          limit: 10
+          limit: 3
         }
       });
+
+      // Should return cases with active status
+      expect(response.body.data.cases.length).toBeGreaterThan(0);
     });
 
     it('should handle search and filtering parameters', async () => {
+      // Create enough test cases for pagination
+      await testDataHelpers.createMultipleTestCases(8);
+
       const response = await request(app)
-        .get('/api/cases?status=active&page=2&limit=5')
+        .get('/api/cases?status=active&page=2&limit=3')
         .expect(200);
 
       expect(response.body).toMatchObject({
@@ -646,9 +644,12 @@ describe('API Tests - Case Management Endpoints', () => {
           cases: expect.any(Array),
           total: expect.any(Number),
           page: 2,
-          limit: 5
+          limit: 3
         }
       });
+
+      // Should return remaining cases on page 2
+      expect(response.body.data.total).toBeGreaterThan(3);
     });
   });
 

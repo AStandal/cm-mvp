@@ -10,57 +10,35 @@ import {
   ProcessStep
 } from '../types/index.js';
 import { randomUUID } from 'crypto';
-import path from 'path';
-import fs from 'fs';
+import { setupUnitTestDatabase } from './utils/testDatabaseFactory.js';
+import { DatabaseConnection } from '../database/connection.js';
 
 describe('DataService', () => {
   let dataService: DataService;
   let dbManager: DatabaseManager;
-  let testDbPath: string;
+  
+  // Use in-memory database for unit tests
+  const dbHooks = setupUnitTestDatabase('DataService');
 
   beforeAll(async () => {
-    // Create a unique test database for this test suite
-    const testId = `dataservice_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    testDbPath = path.join(process.cwd(), 'test_data', `${testId}.db`);
-
-    // Ensure test directory exists
-    const testDir = path.dirname(testDbPath);
-    if (!fs.existsSync(testDir)) {
-      fs.mkdirSync(testDir, { recursive: true });
-    }
-
+    await dbHooks.beforeAll();
+    
     // Set test environment
     process.env.NODE_ENV = 'test';
-
-    // Initialize database for testing with custom path
-    const { DatabaseConnection } = await import('../database/connection.js');
-    DatabaseConnection.resetInstance();
-    DatabaseConnection.getInstance(testDbPath);
     
-    dbManager = new DatabaseManager();
-    await dbManager.initialize({ dropExisting: true, seedData: false });
-
-    dataService = new DataService();
+    // Reset services to ensure they use the test database
+    const { resetServices, getServices } = await import('../routes/serviceFactory.js');
+    resetServices();
+    const services = getServices();
+    dataService = services.dataService;
   });
 
   afterAll(async () => {
-    // Clean up test database
-    dbManager.close();
-    const { DatabaseConnection } = await import('../database/connection.js');
-    DatabaseConnection.resetInstance();
-    
-    if (fs.existsSync(testDbPath)) {
-      try {
-        fs.unlinkSync(testDbPath);
-      } catch (error) {
-        console.warn(`Failed to delete test database: ${error}`);
-      }
-    }
+    await dbHooks.afterAll();
   });
 
   beforeEach(async () => {
-    // Reset database before each test without seeding
-    await dbManager.initialize({ dropExisting: true, seedData: false });
+    await dbHooks.beforeEach();
   });
 
   describe('saveCase and getCase', () => {
@@ -323,7 +301,8 @@ describe('DataService', () => {
 
       const result = dataService.transaction(() => {
         // Use synchronous operations within transaction
-        const stmt1 = dbManager.getConnection().prepare(`
+        const connection = DatabaseConnection.getInstance();
+        const stmt1 = connection.prepare(`
           INSERT INTO cases (id, application_data, status, current_step, created_at, updated_at)
           VALUES (?, ?, ?, ?, ?, ?)
         `);
@@ -336,7 +315,7 @@ describe('DataService', () => {
           testCase.updatedAt.toISOString()
         );
 
-        const stmt2 = dbManager.getConnection().prepare(`
+        const stmt2 = connection.prepare(`
           INSERT INTO case_notes (id, case_id, content, created_by, created_at)
           VALUES (?, ?, ?, ?, ?)
         `);
@@ -666,7 +645,8 @@ describe('DataService', () => {
       expect(aiHistory).toHaveLength(1);
 
       // Delete case by directly using database connection (simulating cascade delete)
-      const stmt = dbManager.getConnection().prepare('DELETE FROM cases WHERE id = ?');
+      const connection = DatabaseConnection.getInstance();
+      const stmt = connection.prepare('DELETE FROM cases WHERE id = ?');
       stmt.run(testCase.id);
 
       // Verify case and related data are gone
@@ -1085,3 +1065,63 @@ describe('DataService', () => {
     };
   }
 });
+
+// Helper functions for creating test data
+function createTestCase(): Case {
+  return {
+    id: randomUUID(),
+    applicationData: {
+      applicantName: 'John Doe',
+      applicantEmail: 'john.doe@example.com',
+      applicationType: 'standard',
+      submissionDate: new Date(),
+      documents: [],
+      formData: {}
+    },
+    status: CaseStatus.ACTIVE,
+    currentStep: ProcessStep.RECEIVED,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    notes: [],
+    aiSummaries: [],
+    auditTrail: []
+  };
+}
+
+function createTestAISummary(caseId: string): AISummaryModel {
+  return {
+    id: randomUUID(),
+    caseId,
+    type: 'overall',
+    content: 'Test AI summary content',
+    recommendations: ['Test recommendation 1', 'Test recommendation 2'],
+    confidence: 0.85,
+    generatedAt: new Date(),
+    version: 1
+  };
+}
+
+function createTestActivity(caseId: string): ActivityLog {
+  return {
+    id: randomUUID(),
+    caseId,
+    action: 'case_created',
+    userId: 'test-user',
+    timestamp: new Date()
+  };
+}
+
+function createTestAIInteraction(caseId: string): AIInteraction {
+  return {
+    id: randomUUID(),
+    caseId,
+    operation: 'generate_summary',
+    prompt: 'Test prompt',
+    response: 'Test response',
+    model: 'grok-beta',
+    tokensUsed: 100,
+    duration: 1000,
+    success: true,
+    timestamp: new Date()
+  };
+}

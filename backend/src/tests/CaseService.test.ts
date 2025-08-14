@@ -13,39 +13,27 @@ import {
   MissingFieldsAnalysis
 } from '../types/index.js';
 import { randomUUID } from 'crypto';
-import path from 'path';
-import fs from 'fs';
+import { setupUnitTestDatabase } from './utils/testDatabaseFactory.js';
 
 describe('CaseService', () => {
   let caseService: CaseService;
   let dataService: DataService;
   let aiService: AIService;
-  let dbManager: DatabaseManager;
-  let testDbPath: string;
+  
+  // Use in-memory database for unit tests
+  const dbHooks = setupUnitTestDatabase('CaseService');
 
   beforeAll(async () => {
-    // Create a unique test database for this test suite
-    const testId = `caseservice_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    testDbPath = path.join(process.cwd(), 'test_data', `${testId}.db`);
-
-    // Ensure test directory exists
-    const testDir = path.dirname(testDbPath);
-    if (!fs.existsSync(testDir)) {
-      fs.mkdirSync(testDir, { recursive: true });
-    }
-
+    await dbHooks.beforeAll();
+    
     // Set test environment
     process.env.NODE_ENV = 'test';
-
-    // Initialize database for testing with custom path
-    const { DatabaseConnection } = await import('../database/connection.js');
-    DatabaseConnection.resetInstance();
-    DatabaseConnection.getInstance(testDbPath);
     
-    dbManager = new DatabaseManager();
-    await dbManager.initialize({ dropExisting: true, seedData: false });
-
-    dataService = new DataService();
+    // Reset services to ensure they use the test database
+    const { resetServices, getServices } = await import('../routes/serviceFactory.js');
+    resetServices();
+    const services = getServices();
+    dataService = services.dataService;
     
     // Mock AIService for testing
     aiService = {
@@ -61,23 +49,11 @@ describe('CaseService', () => {
   });
 
   afterAll(async () => {
-    // Clean up test database
-    dbManager.close();
-    const { DatabaseConnection } = await import('../database/connection.js');
-    DatabaseConnection.resetInstance();
-    
-    if (fs.existsSync(testDbPath)) {
-      try {
-        fs.unlinkSync(testDbPath);
-      } catch (error) {
-        console.warn(`Failed to delete test database: ${error}`);
-      }
-    }
+    await dbHooks.afterAll();
   });
 
   beforeEach(async () => {
-    // Reset database before each test
-    await dbManager.initialize({ dropExisting: true, seedData: false });
+    await dbHooks.beforeEach();
     
     // Reset all mocks
     vi.clearAllMocks();
@@ -781,3 +757,57 @@ describe('CaseService', () => {
     };
   }
 });
+
+// Helper functions for creating test data
+function createTestApplicationData(): ApplicationData {
+  return {
+    applicantName: 'John Doe',
+    applicantEmail: 'john.doe@example.com',
+    applicationType: 'standard',
+    submissionDate: new Date(),
+    documents: [],
+    formData: {}
+  };
+}
+
+function createTestAISummary(caseId: string): AISummary {
+  return {
+    id: randomUUID(),
+    caseId,
+    type: 'overall',
+    content: 'Test AI summary content',
+    recommendations: ['Test recommendation 1', 'Test recommendation 2'],
+    confidence: 0.85,
+    generatedAt: new Date(),
+    version: 1
+  };
+}
+
+function createTestActivity(caseId: string): ActivityLog {
+  return {
+    id: randomUUID(),
+    caseId,
+    action: 'case_created',
+    userId: 'test-user',
+    timestamp: new Date()
+  };
+}
+
+function createTestApplicationAnalysis(): ApplicationAnalysis {
+  return {
+    completenessScore: 0.9,
+    riskLevel: 'low',
+    recommendedActions: ['Review documents', 'Verify information'],
+    keyFindings: ['All required fields present', 'Valid email format'],
+    confidence: 0.85
+  };
+}
+
+function createTestMissingFieldsAnalysis(): MissingFieldsAnalysis {
+  return {
+    missingFields: [],
+    completenessScore: 0.95,
+    recommendations: ['Application is complete'],
+    criticalFieldsMissing: false
+  };
+}

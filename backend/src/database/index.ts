@@ -13,15 +13,16 @@ export class DatabaseManager {
     this.connection = DatabaseConnection.getInstance();
     this.schema = new DatabaseSchema();
     this.migrationManager = new MigrationManager();
-    this.seeder = new DatabaseSeeder();
+    this.seeder = DatabaseSeeder.createTestSeeder(); // Use minimal seeder by default
   }
 
   public async initialize(options: {
     runMigrations?: boolean;
     seedData?: boolean;
+    seedRecordCount?: number;
     dropExisting?: boolean;
   } = {}): Promise<void> {
-    const { runMigrations = true, seedData = false, dropExisting = false } = options;
+    const { runMigrations = true, seedData = false, seedRecordCount = 20, dropExisting = false } = options;
 
     console.log('Initializing database...');
 
@@ -48,7 +49,9 @@ export class DatabaseManager {
 
       // Seed data if requested
       if (seedData) {
-        await this.seeder.seedDatabase();
+        // Create a new seeder with the specified record count
+        const seeder = new DatabaseSeeder(seedRecordCount);
+        await seeder.seedDatabase();
       }
 
       // Health check
@@ -81,7 +84,7 @@ export class DatabaseManager {
 
   public async reset(): Promise<void> {
     console.log('Resetting database...');
-    await this.initialize({ dropExisting: true, seedData: true });
+    await this.initialize({ dropExisting: true, seedData: true, seedRecordCount: 20 });
   }
 
   public close(): void {
