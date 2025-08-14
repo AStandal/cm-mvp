@@ -5,6 +5,7 @@ const Layout = () => {
 
   const navigation = [
     { name: 'Dashboard', href: '/', current: location.pathname === '/' },
+    { name: 'Cases', href: '/cases', current: location.pathname === '/cases' },
     { name: 'New Case', href: '/cases/new', current: location.pathname === '/cases/new' },
   ];
 

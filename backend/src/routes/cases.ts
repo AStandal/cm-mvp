@@ -157,29 +157,41 @@ router.post('/', validateInput(createCaseSchema), asyncHandler(async (req: Reque
  * Requirements: 1.1, 1.2
  */
 router.get('/', asyncHandler(async (req: Request, res: Response): Promise<void> => {
-  const { status, page = 1, limit = 10 } = req.query;
-
   try {
+    const { status, search, sortField, sortDirection, page, limit } = req.query;
+    
     // Get services and retrieve cases
     const { caseService } = getServices();
-    const cases = await caseService.getAllCases({
-      status: status as string,
-      page: parseInt(page as string),
-      limit: parseInt(limit as string)
-    });
-
+    
+    // Parse query parameters
+    const params: {
+      status?: string;
+      search?: string;
+      sortField?: string;
+      sortDirection?: 'asc' | 'desc';
+      page?: number;
+      limit?: number;
+    } = {};
+    
+    if (status) params.status = status as string;
+    if (search) params.search = search as string;
+    if (sortField) params.sortField = sortField as string;
+    if (sortDirection) params.sortDirection = sortDirection as 'asc' | 'desc';
+    if (page) params.page = parseInt(page as string, 10);
+    if (limit) params.limit = parseInt(limit as string, 10);
+    
+    // Set defaults
+    if (!params.page) params.page = 1;
+    if (!params.limit) params.limit = 10;
+    
+    const result = await caseService.getAllCases(params);
+    
     // Return the cases data
     res.status(200).json({
       success: true,
-      data: {
-        cases: cases.cases,
-        total: cases.total,
-        page: cases.page,
-        limit: cases.limit
-      },
+      data: result,
       timestamp: new Date().toISOString()
     });
-
   } catch (error) {
     const errorResponse: ErrorResponse = {
       error: {
@@ -190,7 +202,6 @@ router.get('/', asyncHandler(async (req: Request, res: Response): Promise<void> 
       timestamp: new Date().toISOString(),
       requestId: randomUUID()
     };
-
     res.status(500).json(errorResponse);
   }
 }));

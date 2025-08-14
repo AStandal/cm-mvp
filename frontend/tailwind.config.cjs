@@ -63,6 +63,9 @@ module.exports = {
         '18': '4.5rem',
         '88': '22rem',
       },
+      scale: {
+        '102': '1.02',
+      },
       animation: {
         'fade-in': 'fadeIn 0.5s ease-in-out',
         'slide-up': 'slideUp 0.3s ease-out',

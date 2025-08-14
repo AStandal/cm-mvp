@@ -334,34 +334,40 @@ export class CaseService {
    */
   async getAllCases(params?: {
     status?: string;
+    search?: string;
+    sortField?: string;
+    sortDirection?: 'asc' | 'desc';
     page?: number;
     limit?: number;
   }): Promise<{ cases: Case[]; total: number; page: number; limit: number }> {
     try {
-      const { status, page = 1, limit = 10 } = params || {};
+      const { status, search, sortField = 'updatedAt', sortDirection = 'desc', page = 1, limit = 10 } = params || {};
       
-      // Get all cases from database
-      const allCases = await this.dataService.getAllCases();
-      
-      // Filter by status if provided
-      let filteredCases = allCases;
-      if (status) {
-        const statusEnum = status as CaseStatus;
-        filteredCases = allCases.filter(case_ => case_.status === statusEnum);
+      // Map frontend sort fields to backend sort fields
+      let backendSortField = sortField;
+      if (sortField === 'updatedAt') {
+        backendSortField = 'updated_at';
+      } else if (sortField === 'submissionDate') {
+        backendSortField = 'submissionDate';
+      } else if (sortField === 'applicantName') {
+        backendSortField = 'applicantName';
+      } else if (sortField === 'applicationType') {
+        backendSortField = 'applicationType';
+      } else if (sortField === 'currentStep') {
+        backendSortField = 'current_step';
       }
       
-      // Calculate pagination
-      const total = filteredCases.length;
-      const startIndex = (page - 1) * limit;
-      const endIndex = startIndex + limit;
-      const paginatedCases = filteredCases.slice(startIndex, endIndex);
+      // Get cases from database with backend sorting
+      const result = await this.dataService.getAllCases({
+        ...(status && { status }),
+        ...(search && { search }),
+        ...(sortField && { sortField: backendSortField }),
+        ...(sortDirection && { sortDirection }),
+        ...(page && { page }),
+        ...(limit && { limit })
+      });
       
-      return {
-        cases: paginatedCases,
-        total,
-        page,
-        limit
-      };
+      return result;
     } catch (error) {
       throw new Error(`Failed to get all cases: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }

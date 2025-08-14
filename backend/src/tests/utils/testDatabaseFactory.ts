@@ -61,7 +61,8 @@ export class TestDatabaseFactory {
     if (config.migrations !== false) {
       await manager.initialize({ 
         dropExisting: true, 
-        seedData: config.seedData || false 
+        seedData: config.seedData || false,
+        seedRecordCount: config.seedData ? 5 : 20 // Use only 5 records for tests when seeding
       });
     }
 

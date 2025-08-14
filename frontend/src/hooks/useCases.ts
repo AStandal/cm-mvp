@@ -17,6 +17,9 @@ export const caseKeys = {
 // Hook to get all cases
 export const useCases = (params?: {
   status?: CaseStatus;
+  search?: string;
+  sortField?: string;
+  sortDirection?: 'asc' | 'desc';
   page?: number;
   limit?: number;
 }) => {

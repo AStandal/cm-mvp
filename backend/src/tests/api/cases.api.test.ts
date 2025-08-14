@@ -478,7 +478,7 @@ describe('API Tests - Case Management Endpoints', () => {
 
   describe('GET /api/cases/:id/ai-summary', () => {
     it('should return 404 for non-existent case', async () => {
-      const testCaseId = 'non-existent-case-123';
+      const testCaseId = 'test-case-123';
 
       const response = await request(app)
         .get(`/api/cases/${testCaseId}/ai-summary`)
@@ -523,7 +523,7 @@ describe('API Tests - Case Management Endpoints', () => {
 
   describe('POST /api/cases/:id/ai-refresh', () => {
     it('should return 404 for non-existent case', async () => {
-      const testCaseId = 'non-existent-case-123';
+      const testCaseId = 'test-case-123';
 
       const response = await request(app)
         .post(`/api/cases/${testCaseId}/ai-refresh`)
