@@ -45,27 +45,32 @@ const CaseListItem = ({ caseData }: CaseListItemProps) => {
 
   return (
     <Link to={`/cases/${caseData.id}`} className="block">
-      <Card className="hover:shadow-lg hover:shadow-blue-100 transition-all duration-300 hover:scale-[1.02] cursor-pointer group">
-        <div className="flex justify-between items-start mb-4">
-          <div className="flex-1">
-            <h3 className="text-lg font-semibold text-gray-900 mb-2 group-hover:text-blue-600 transition-colors duration-200">
-              {caseData.applicationData.applicantName}
-            </h3>
-            <p className="text-sm text-gray-600 mb-2">
-              {caseData.applicationData.applicationType}
-            </p>
-            <p className="text-xs text-gray-500">
-              Submitted: {formatDate(caseData.applicationData.submissionDate)}
-            </p>
+      <Card className="hover:shadow-lg hover:shadow-blue-100 transition-all duration-300 hover:scale-[1.02] cursor-pointer group p-3">
+        <div className="flex items-center justify-between">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center space-x-3 mb-1">
+              <h3 className="text-base font-semibold text-gray-900 group-hover:text-blue-600 transition-colors duration-200 truncate">
+                {caseData.applicationData.applicantName}
+              </h3>
+              <Badge 
+                variant={getStatusVariant(caseData.status)} 
+                size="sm"
+                className="transition-transform duration-200 group-hover:scale-105 flex-shrink-0"
+              >
+                {caseData.status}
+              </Badge>
+            </div>
+            <div className="flex items-center space-x-4 text-xs text-gray-600">
+              <span className="truncate">{caseData.applicationData.applicationType}</span>
+              <span>📄 {caseData.applicationData.documents.length}</span>
+              <span>💬 {caseData.notes.length}</span>
+            </div>
+            <div className="flex items-center space-x-4 text-xs text-gray-500 mt-1">
+              <span>Submitted: {formatDate(caseData.applicationData.submissionDate)}</span>
+              <span>Updated: {formatDate(caseData.updatedAt)}</span>
+            </div>
           </div>
-          <div className="flex flex-col items-end space-y-2">
-            <Badge 
-              variant={getStatusVariant(caseData.status)} 
-              size="sm"
-              className="transition-transform duration-200 group-hover:scale-105"
-            >
-              {caseData.status}
-            </Badge>
+          <div className="flex flex-col items-end space-y-1 ml-3 flex-shrink-0">
             <Badge 
               variant={getStepVariant(caseData.currentStep)} 
               size="sm"
@@ -73,20 +78,6 @@ const CaseListItem = ({ caseData }: CaseListItemProps) => {
             >
               {getStepLabel(caseData.currentStep)}
             </Badge>
-          </div>
-        </div>
-        
-        <div className="flex justify-between items-center text-sm text-gray-600">
-          <div className="flex items-center space-x-4">
-            <span className="transition-colors duration-200 group-hover:text-blue-600">
-              📄 {caseData.applicationData.documents.length} documents
-            </span>
-            <span className="transition-colors duration-200 group-hover:text-blue-600">
-              💬 {caseData.notes.length} notes
-            </span>
-          </div>
-          <div className="text-xs text-gray-500">
-            Updated: {formatDate(caseData.updatedAt)}
           </div>
         </div>
       </Card>
