@@ -47,8 +47,8 @@ app.use(express.json({
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // JSON parse error handler (malformed JSON)
-app.use((err: any, _req: Request, res: Response, next: NextFunction): void => {
-  const isBodyParserSyntaxError = err?.type === 'entity.parse.failed' || (err instanceof SyntaxError && (err as any)?.status === 400);
+app.use((err: Error & { type?: string; status?: number }, _req: Request, res: Response, next: NextFunction): void => {
+  const isBodyParserSyntaxError = err?.type === 'entity.parse.failed' || (err instanceof SyntaxError && err.status === 400);
   if (isBodyParserSyntaxError) {
     if (NODE_ENV !== 'test') {
       console.warn('Invalid JSON payload');
@@ -92,9 +92,11 @@ app.get('/version', (_req: Request, res: Response) => {
 
 // Import routes
 import casesRouter from './routes/cases.js';
+import aiRouter from './routes/ai.js';
 
 // API routes
 app.use('/api/cases', casesRouter);
+app.use('/api/ai', aiRouter);
 
 // Fallback for unimplemented API routes
 app.use('/api', (_req: Request, res: Response) => {
@@ -124,7 +126,7 @@ app.use((err: Error, _req: Request, res: Response, _next: NextFunction): void =>
   res.status(500).json({
     error: 'Internal server error',
     message: isDevelopment ? err.message : 'Something went wrong',
-    ...(isDevelopment && { stack: (err as any).stack })
+    ...(isDevelopment && { stack: err.stack })
   });
 });
 

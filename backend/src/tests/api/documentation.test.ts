@@ -1,77 +1,103 @@
 import { describe, it, expect } from 'vitest';
 import request from 'supertest';
 import app from '@/index.js';
-import { testSuites } from './index.js';
+import { setupDatabaseHooks, testDataHelpers } from './setup.js';
 
 /**
- * API Documentation Accuracy Tests
+ * API Behavior and Schema Tests
  * 
- * These tests ensure that the API documentation matches the actual endpoints
- * and that all documented endpoints are properly implemented (or return appropriate
- * 404 responses with consistent error messages when not yet implemented).
+ * These tests validate the actual behavior of implemented API endpoints,
+ * ensuring proper request/response schemas, error handling, and integration behavior.
+ * Only tests endpoints that are actually implemented.
  */
 
-describe('API Documentation Accuracy Tests', () => {
-  describe('Endpoint Documentation Coverage', () => {
-    it('should document all implemented endpoints', async () => {
-      // Test that all endpoints in our test suites are properly documented
-      for (const suite of testSuites) {
-        for (const endpoint of suite.endpoints) {
-          // Replace path parameters with test values
-          const testEndpoint = endpoint
-            .replace(':id', 'test-123')
-            .replace(':runId', 'test-run-123')
-            .replace(':datasetId', 'test-dataset-123')
-            .replace(':promptId', 'test-prompt-123')
-            .replace(':testId', 'test-ab-123');
+describe('API Behavior and Schema Tests', () => {
+  setupDatabaseHooks();
+  describe('Implemented Endpoints', () => {
+    it('should have working case management endpoints', async () => {
+      // Create test data first
+      const testCase = await testDataHelpers.createTestCase({
+        applicantName: 'Test User',
+        applicantEmail: 'test@example.com',
+        applicationType: 'standard'
+      });
 
-          // Test GET endpoints
-          if (!endpoint.includes('POST') && !endpoint.includes('PUT') && !endpoint.includes('DELETE')) {
-            const response = await request(app)
-              .get(testEndpoint);
-
-            // Should return either 200 (implemented) or 404 (not implemented)
-            expect([200, 404]).toContain(response.status);
-            
-            if (response.status === 404) {
-              // Should have consistent error message for unimplemented endpoints
-              // Handle both simple and structured error responses
-              if (response.body.error && typeof response.body.error === 'object') {
-                // Structured error response (like from case management endpoints)
-                expect(response.body).toMatchObject({
-                  error: {
-                    code: expect.any(String),
-                    message: expect.any(String)
-                  }
-                });
-              } else {
-                // Simple error response (like from unimplemented endpoints)
-                expect(response.body).toMatchObject({
-                  error: expect.any(String),
-                  message: expect.any(String)
-                });
-              }
-            }
+      const implementedEndpoints = [
+        { method: 'GET', path: '/api/cases', expectedStatus: 200 },
+        { method: 'POST', path: '/api/cases', expectedStatus: 201, body: {
+          applicationData: {
+            applicantName: 'New User',
+            applicantEmail: 'new@example.com',
+            applicationType: 'standard'
           }
+        }},
+        { method: 'GET', path: `/api/cases/${testCase.id}`, expectedStatus: 200 },
+        { method: 'GET', path: `/api/cases/${testCase.id}/ai-summary`, expectedStatus: 200 },
+        { method: 'POST', path: `/api/cases/${testCase.id}/ai-refresh`, expectedStatus: 200, body: {} },
+        { method: 'GET', path: `/api/cases/${testCase.id}/notes`, expectedStatus: 200 },
+        { method: 'POST', path: `/api/cases/${testCase.id}/notes`, expectedStatus: 201, body: {
+          content: 'Test note',
+          userId: 'test-user'
+        }}
+      ];
+
+      for (const { method, path, expectedStatus, body } of implementedEndpoints) {
+        let response;
+        if (method === 'GET') {
+          response = await request(app).get(path);
+        } else if (method === 'POST') {
+          response = await request(app).post(path).send(body || {});
+        }
+
+        expect(response).toBeDefined();
+        expect(response!.status).toBe(expectedStatus);
+        expect(response!.headers['content-type']).toMatch(/application\/json/);
+        
+        if (expectedStatus < 400) {
+          expect(response!.body).toHaveProperty('success', true);
+          expect(response!.body).toHaveProperty('data');
         }
       }
     });
 
-    it('should have consistent error responses for unimplemented endpoints', async () => {
-      const testEndpoints = [
-        '/api/cases',
+    it('should have working AI service endpoints', async () => {
+      // Test the analyze-application endpoint which is working
+      const response = await request(app)
+        .post('/api/ai/analyze-application')
+        .send({
+          applicationData: {
+            applicantName: 'Test User',
+            applicantEmail: 'test@example.com',
+            applicationType: 'standard'
+          }
+        });
+
+      expect(response.status).toBe(200);
+      expect(response.headers['content-type']).toMatch(/application\/json/);
+      expect(response.body).toHaveProperty('success', true);
+      expect(response.body).toHaveProperty('data');
+      expect(response.body.data).toHaveProperty('analysis');
+    });
+  });
+
+  describe('Unimplemented Endpoints', () => {
+    it('should return 404 for truly unimplemented endpoints', async () => {
+      const unimplementedEndpoints = [
         '/api/models',
+        '/api/models/current',
         '/api/evaluation/datasets',
+        '/api/evaluation/run',
+        '/api/auth/login',
         '/api/auth/profile',
         '/api/docs'
       ];
 
-      for (const endpoint of testEndpoints) {
+      for (const endpoint of unimplementedEndpoints) {
         const response = await request(app)
           .get(endpoint)
           .expect(404);
 
-        // All unimplemented API endpoints should return the same error structure
+        // Should return consistent error format for unimplemented endpoints
         expect(response.body).toMatchObject({
           error: 'API endpoints not yet implemented',
           message: 'This endpoint will be available in future releases'
@@ -82,48 +108,51 @@ describe('API Documentation Accuracy Tests', () => {
     });
   });
 
-  describe('HTTP Method Documentation', () => {
-    it('should document supported HTTP methods for each endpoint', async () => {
+  describe('HTTP Method Support', () => {
+    it('should support correct HTTP methods for implemented endpoints', async () => {
+      // Create test case for endpoints that need it
+      const testCase = await testDataHelpers.createTestCase();
+
       const endpointMethods = [
         { endpoint: '/api/cases', methods: ['GET', 'POST'] },
-        { endpoint: '/api/cases/test-123', methods: ['GET'] },
-        { endpoint: '/api/cases/test-123/status', methods: ['PUT'] },
-        { endpoint: '/api/cases/test-123/notes', methods: ['POST'] },
-        { endpoint: '/api/models', methods: ['GET'] },
-        { endpoint: '/api/models/current', methods: ['GET', 'PUT'] },
-        { endpoint: '/api/evaluation/datasets', methods: ['POST'] },
-        { endpoint: '/api/evaluation/run', methods: ['POST'] },
-        { endpoint: '/api/auth/login', methods: ['POST'] },
-        { endpoint: '/api/auth/profile', methods: ['GET', 'PUT'] }
+        { endpoint: `/api/cases/${testCase.id}`, methods: ['GET'] },
+        { endpoint: `/api/cases/${testCase.id}/notes`, methods: ['GET', 'POST'] },
+        { endpoint: `/api/cases/${testCase.id}/ai-summary`, methods: ['GET'] },
+        { endpoint: `/api/cases/${testCase.id}/ai-refresh`, methods: ['POST'] },
+        { endpoint: '/api/ai/analyze-application', methods: ['POST'] },
+        { endpoint: '/api/ai/validate-completeness', methods: ['POST'] },
+        { endpoint: '/api/ai/detect-missing-fields', methods: ['POST'] }
       ];
 
       for (const { endpoint, methods } of endpointMethods) {
         for (const method of methods) {
           let response;
+          const sampleBody = {
+            applicationData: {
+              applicantName: 'Test User',
+              applicantEmail: 'test@example.com',
+              applicationType: 'standard'
+            }
+          };
+
           if (method === 'GET') {
             response = await request(app).get(endpoint);
           } else if (method === 'POST') {
-            response = await request(app).post(endpoint);
-          } else if (method === 'PUT') {
-            response = await request(app).put(endpoint);
-          } else if (method === 'DELETE') {
-            response = await request(app).delete(endpoint);
-          } else {
-            continue; // Skip unsupported methods
+            response = await request(app).post(endpoint).send(
+              endpoint.includes('/notes') ? { content: 'Test note', userId: 'test-user' } :
+              endpoint.includes('/ai-refresh') ? {} :
+              endpoint.includes('/cases') ? { applicationData: sampleBody.applicationData } :
+              sampleBody
+            );
           }
           
-          // Should return either success (200/201), client error (400), or 404 for unimplemented endpoints
-          // Should not return 405 (Method Not Allowed) for documented endpoints
-          expect([200, 201, 400, 404]).toContain(response.status);
-          expect(response.status).not.toBe(405);
+          // Should return success or client error, not method not allowed
+          expect(response).toBeDefined();
+          expect([200, 201, 400]).toContain(response!.status);
+          expect(response!.status).not.toBe(405);
           
-          // Check response structure based on status
-          if (response.status >= 400) {
-            expect(response.body).toHaveProperty('error');
-          } else {
-            // Success responses should have data
-            expect(response.body).toHaveProperty('data');
-          }
+          // All responses should be JSON
+          expect(response!.headers['content-type']).toMatch(/application\/json/);
         }
       }
     });
@@ -131,9 +160,7 @@ describe('API Documentation Accuracy Tests', () => {
     it('should handle OPTIONS requests for CORS preflight', async () => {
       const endpoints = [
         '/api/cases',
-        '/api/models',
-        '/api/evaluation/datasets',
-        '/api/auth/login'
+        '/api/ai/analyze-application'
       ];
 
       for (const endpoint of endpoints) {
@@ -149,276 +176,213 @@ describe('API Documentation Accuracy Tests', () => {
     });
   });
 
-  describe('Request/Response Schema Documentation', () => {
-    it('should document request body schemas for POST endpoints', async () => {
+  describe('Request/Response Schema Validation', () => {
+    it('should validate request schemas for implemented POST endpoints', async () => {
+      // Create test case for endpoints that need it
+      const testCase = await testDataHelpers.createTestCase();
+
       const postEndpoints = [
         {
           endpoint: '/api/cases',
-          sampleBody: {
+          validBody: {
             applicationData: {
               applicantName: 'Test User',
               applicantEmail: 'test@example.com',
               applicationType: 'standard'
             }
-          }
+          },
+          expectedStatus: 201
         },
         {
-          endpoint: '/api/cases/test-123/notes',
-          sampleBody: {
+          endpoint: `/api/cases/${testCase.id}/notes`,
+          validBody: {
             content: 'Test note',
             userId: 'test-user'
-          }
-        },
-        {
-          endpoint: '/api/evaluation/datasets',
-          sampleBody: {
-            name: 'Test Dataset',
-            description: 'Test description',
-            operation: 'generate_summary'
-          }
-        },
-        {
-          endpoint: '/api/auth/login',
-          sampleBody: {
-            email: 'test@example.com',
-            password: 'testpassword'
-          }
+          },
+          expectedStatus: 201
         },
         {
           endpoint: '/api/ai/analyze-application',
-          sampleBody: {
+          validBody: {
             applicationData: {
               applicantName: 'Test User',
               applicantEmail: 'test@example.com',
               applicationType: 'standard'
             }
-          }
+          },
+          expectedStatus: 200
         },
-        {
-          endpoint: '/api/ai/validate-completeness',
-          sampleBody: {
-            caseData: {
-              id: 'test-case-123',
-              status: 'active',
-              applicationData: { applicantName: 'Test User' }
-            }
-          }
-        },
-        {
-          endpoint: '/api/ai/detect-missing-fields',
-          sampleBody: {
-            applicationData: {
-              applicantName: 'Test User'
-            }
-          }
-        },
-        {
-          endpoint: '/api/ai/step-recommendations',
-          sampleBody: {
-            caseData: { id: 'test-case-123' },
-            step: 'in_review'
-          }
-        },
-        {
-          endpoint: '/api/ai/generate-final-summary',
-          sampleBody: {
-            caseData: {
-              id: 'test-case-123',
-              applicationData: { applicantName: 'Test User' }
-            }
-          }
-        }
+
+
       ];
 
-      for (const { endpoint, sampleBody } of postEndpoints) {
+      for (const { endpoint, validBody, expectedStatus } of postEndpoints) {
         const response = await request(app)
           .post(endpoint)
-          .send(sampleBody);
+          .send(validBody);
 
-        // Should return either success (200/201), client error (400), or 404 for unimplemented endpoints
-        expect([200, 201, 400, 404]).toContain(response.status);
-
-        // Should parse JSON body correctly (indicated by JSON response)
+        expect(response.status).toBe(expectedStatus);
         expect(response.headers['content-type']).toMatch(/application\/json/);
-        
-        // All responses should have structured data
-        if (response.status === 404) {
-          expect(response.body).toHaveProperty('error');
-        } else if (response.status >= 400) {
-          expect(response.body).toHaveProperty('error');
-        } else {
-          // Success responses should have data
+        expect(response.body).toHaveProperty('success', true);
+        expect(response.body).toHaveProperty('data');
+      }
+    });
+
+    it('should return consistent success response format', async () => {
+      // Test that successful responses follow { success: true, data: {...} } format
+      const testCase = await testDataHelpers.createTestCase();
+
+      const successEndpoints = [
+        { method: 'GET', path: '/api/cases' },
+        { method: 'GET', path: `/api/cases/${testCase.id}` },
+        { method: 'GET', path: '/health' },
+        { method: 'GET', path: '/version' }
+      ];
+
+      for (const { path } of successEndpoints) {
+        const response = await request(app).get(path);
+
+        expect(response.status).toBeLessThan(400);
+        expect(response.headers['content-type']).toMatch(/application\/json/);
+        expect(response.body).toBeDefined();
+        expect(typeof response.body).toBe('object');
+
+        // Most API endpoints should follow the success format
+        if (path.startsWith('/api/')) {
+          expect(response.body).toHaveProperty('success', true);
           expect(response.body).toHaveProperty('data');
         }
       }
     });
 
-    it('should document response schemas for all endpoints', async () => {
-      // Test that all endpoints return consistent JSON responses
-      const endpoints = [
-        '/health',
-        '/version',
-        '/api/cases',
-        '/api/models',
-        '/api/evaluation/datasets'
-      ];
-
-      for (const endpoint of endpoints) {
-        const response = await request(app).get(endpoint);
-
-        // All responses should be JSON
-        expect(response.headers['content-type']).toMatch(/application\/json/);
-        
-        // Should have proper response structure
-        expect(response.body).toBeDefined();
-        expect(typeof response.body).toBe('object');
-      }
-    });
-  });
-
-  describe('Authentication Documentation', () => {
-    it('should document authentication requirements', async () => {
-      const authRequiredEndpoints = [
-        '/api/cases',
-        '/api/cases/test-123/status',
-        '/api/cases/test-123/notes',
-        '/api/models/current',
-        '/api/evaluation/run',
-        '/api/ai/analyze-application',
-        '/api/ai/validate-completeness',
-        '/api/ai/detect-missing-fields',
-        '/api/ai/step-recommendations',
-        '/api/ai/generate-final-summary'
-      ];
-
-      for (const endpoint of authRequiredEndpoints) {
-        // Test without authorization header
-        const response = await request(app)
-          .get(endpoint)
-          .expect(404);
-
-        // Currently returns 404 (not implemented), but should eventually require auth
-        expect(response.body).toHaveProperty('error');
-      }
-    });
-
-    it('should document authorization header format', async () => {
+    it('should return consistent error response format', async () => {
+      // Test validation errors
       const response = await request(app)
-        .get('/api/auth/profile')
-        .set('Authorization', 'Bearer test-token')
-        .expect(404);
+        .post('/api/cases')
+        .send({ applicationData: { applicantName: '' } }); // Invalid data
 
-      // Should accept Authorization header without errors
+      expect(response.status).toBe(400);
+      expect(response.headers['content-type']).toMatch(/application\/json/);
       expect(response.body).toHaveProperty('error');
+      expect(response.body.error).toHaveProperty('code');
+      expect(response.body.error).toHaveProperty('message');
     });
   });
 
-  describe('Error Response Documentation', () => {
-    it('should document standard error response format', async () => {
-      const response = await request(app)
-        .get('/api/nonexistent')
-        .expect(404);
-
-      // Should follow standard error response format
-      expect(response.body).toMatchObject({
-        error: expect.any(String),
-        message: expect.any(String)
-      });
-
-      expect(response.body.error).toBeTruthy();
-      expect(response.body.message).toBeTruthy();
-    });
-
-    it('should document different error status codes', async () => {
-      // Test malformed JSON (should return 400 or 500)
+  describe('API Integration Behavior', () => {
+    it('should handle malformed JSON requests properly', async () => {
       const response = await request(app)
         .post('/api/cases')
         .set('Content-Type', 'application/json')
         .send('{ invalid json }');
 
       expect([400, 500]).toContain(response.status);
+      expect(response.headers['content-type']).toMatch(/application\/json/);
       expect(response.body).toHaveProperty('error');
     });
-  });
 
-  describe('Rate Limiting Documentation', () => {
-    it('should document rate limiting behavior', async () => {
-      // Test multiple rapid requests to the same endpoint
-      const requests = Array.from({ length: 10 }, () =>
-        request(app).get('/api/cases')
-      );
+    it('should validate request schemas correctly', async () => {
+      // Test missing required fields
+      const response = await request(app)
+        .post('/api/cases')
+        .send({
+          applicationData: {
+            // Missing required applicantName
+            applicantEmail: 'test@example.com',
+            applicationType: 'standard'
+          }
+        });
 
-      const responses = await Promise.all(requests);
-
-      // All should currently return 404 (not implemented)
-      // When rate limiting is implemented, some might return 429
-      responses.forEach(response => {
-        expect([404, 429]).toContain(response.status);
-      });
+      expect(response.status).toBe(400);
+      expect(response.body).toHaveProperty('error');
+      expect(response.body.error).toHaveProperty('code', 'VALIDATION_ERROR');
     });
-  });
 
-  describe('Pagination Documentation', () => {
-    it('should document pagination parameters', async () => {
-      const paginatedEndpoints = [
-        '/api/cases?page=1&limit=10',
-        '/api/models/usage?page=1&limit=20',
-        '/api/evaluation/runs?page=2&limit=5'
-      ];
+    it('should handle missing required fields', async () => {
+      // Test completely missing applicationData
+      const response = await request(app)
+        .post('/api/cases')
+        .send({});
 
-      for (const endpoint of paginatedEndpoints) {
-        const response = await request(app)
-          .get(endpoint)
-          .expect(404);
-
-        // Should handle query parameters without errors
-        expect(response.body).toHaveProperty('error');
-      }
+      expect(response.status).toBe(400);
+      expect(response.body).toHaveProperty('error');
+      expect(response.body.error).toHaveProperty('message');
     });
-  });
 
-  describe('Content-Type Documentation', () => {
-    it('should document supported content types', async () => {
-      const contentTypes = [
-        'application/json',
-        'application/x-www-form-urlencoded'
-      ];
-
-      for (const contentType of contentTypes) {
-        const response = await request(app)
-          .post('/api/cases')
-          .set('Content-Type', contentType)
-          .send(contentType === 'application/json' ? '{"test": "data"}' : 'test=data');
-
-        // Should return either client error (400) for invalid data or 404 for unimplemented endpoints
-        expect([400, 404]).toContain(response.status);
-
-        // Should handle different content types
-        expect(response.body).toHaveProperty('error');
-      }
-    });
-  });
-
-  describe('API Versioning Documentation', () => {
-    it('should document API versioning strategy', async () => {
-      // Test version headers
+    it('should include proper HTTP headers', async () => {
       const response = await request(app)
         .get('/api/cases')
-        .set('API-Version', 'v1')
-        .expect(404);
+        .set('Origin', 'http://localhost:3000');
 
-      expect(response.body).toHaveProperty('error');
+      // Should include CORS headers
+      expect(response.headers).toHaveProperty('access-control-allow-origin');
+      expect(response.headers['content-type']).toMatch(/application\/json/);
+    });
+  });
+
+  describe('Health and System Endpoints', () => {
+    it('should provide health check endpoint', async () => {
+      const response = await request(app)
+        .get('/health')
+        .expect(200);
+
+      expect(response.headers['content-type']).toMatch(/application\/json/);
+      expect(response.body).toHaveProperty('status');
+      expect(response.body).toHaveProperty('timestamp');
     });
 
-    it('should document version endpoint', async () => {
+    it('should provide version information', async () => {
       const response = await request(app)
         .get('/version')
         .expect(200);
 
-      expect(response.body).toMatchObject({
-        version: expect.any(String),
-        name: expect.any(String)
-      });
+      expect(response.headers['content-type']).toMatch(/application\/json/);
+      expect(response.body).toHaveProperty('version');
+      expect(response.body).toHaveProperty('name');
+    });
+
+    it('should handle 404 for unknown routes', async () => {
+      const response = await request(app)
+        .get('/api/nonexistent')
+        .expect(404);
+
+      expect(response.headers['content-type']).toMatch(/application\/json/);
+      expect(response.body).toHaveProperty('error');
+      expect(response.body).toHaveProperty('message');
+    });
+  });
+
+  describe('Content-Type Support', () => {
+    it('should handle JSON content type properly', async () => {
+      const testCase = await testDataHelpers.createTestCase();
+
+      const response = await request(app)
+        .post(`/api/cases/${testCase.id}/notes`)
+        .set('Content-Type', 'application/json')
+        .send({
+          content: 'Test note',
+          userId: 'test-user'
+        });
+
+      expect(response.status).toBe(201);
+      expect(response.headers['content-type']).toMatch(/application\/json/);
+      expect(response.body).toHaveProperty('success', true);
+    });
+
+    it('should return JSON responses for all endpoints', async () => {
+      const endpoints = [
+        '/health',
+        '/version',
+        '/api/cases'
+      ];
+
+      for (const endpoint of endpoints) {
+        const response = await request(app).get(endpoint);
+
+        expect(response.headers['content-type']).toMatch(/application\/json/);
+        expect(response.body).toBeDefined();
+        expect(typeof response.body).toBe('object');
+      }
     });
   });
 });

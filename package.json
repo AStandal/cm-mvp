@@ -14,7 +14,9 @@
     "dev:backend": "cd backend && npm run dev",
     "dev:frontend": "cd frontend && npm run dev",
     "ci:hello": "bash scripts/hello.sh",
-    "mcp:playwright": "npm --workspace mcp/playwright-mcp run build && node mcp/playwright-mcp/dist/index.js"
+    "mcp:playwright": "npm --workspace mcp/playwright-mcp run build && node mcp/playwright-mcp/dist/index.js",
+    "mcp:install": "npm install -g @playwright/mcp@latest",
+    "mcp:test": "npx @playwright/mcp --help"
   },
   "keywords": [
     "ai",

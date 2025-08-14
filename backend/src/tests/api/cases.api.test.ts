@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import request from 'supertest';
-// Import setup first to ensure mocks are applied before importing the app
-import { setupDatabaseHooks } from './setup.js';
+// Import setup first to ensure database is configured before importing the app
+import { setupDatabaseHooks, testDataHelpers } from './setup.js';
 import app from '@/index.js';
 
 describe('API Tests - Case Management Endpoints', () => {
@@ -190,11 +190,25 @@ describe('API Tests - Case Management Endpoints', () => {
     });
 
     it('should validate case ID parameter', async () => {
+      // Create some test cases first
+      await testDataHelpers.createMultipleTestCases(2);
+
       const response = await request(app)
         .get('/api/cases/')
-        .expect(404); // Should hit the general 404 handler
+        .expect(200); // This now hits the GET /api/cases route
 
-      expect(response.body).toHaveProperty('error');
+      expect(response.body).toMatchObject({
+        success: true,
+        data: {
+          cases: expect.any(Array),
+          total: expect.any(Number),
+          page: 1,
+          limit: 10
+        }
+      });
+
+      // Should have the test cases we created
+      expect(response.body.data.total).toBe(2);
     });
 
     it('should handle URL parameters correctly', async () => {
@@ -463,23 +477,53 @@ describe('API Tests - Case Management Endpoints', () => {
   });
 
   describe('GET /api/cases/:id/ai-summary', () => {
-    it('should return 404 for unimplemented endpoint', async () => {
-      const testCaseId = 'test-case-123';
+    it('should return 404 for non-existent case', async () => {
+      const testCaseId = 'non-existent-case-123';
 
       const response = await request(app)
         .get(`/api/cases/${testCaseId}/ai-summary`)
         .expect(404);
 
       expect(response.body).toMatchObject({
-        error: 'API endpoints not yet implemented',
-        message: 'This endpoint will be available in future releases'
+        error: {
+          code: 'CASE_NOT_FOUND',
+          message: `Case with ID ${testCaseId} not found`
+        }
+      });
+    });
+
+    it('should generate AI summary for existing case', async () => {
+      // Create a test case using our helper
+      const testCase = await testDataHelpers.createTestCase({
+        applicantName: 'Test User',
+        applicantEmail: 'test@example.com',
+        applicationType: 'standard'
+      });
+
+      // Get AI summary for the case
+      const response = await request(app)
+        .get(`/api/cases/${testCase.id}/ai-summary`)
+        .expect(200);
+
+      expect(response.body).toMatchObject({
+        success: true,
+        data: {
+          aiSummary: expect.objectContaining({
+            id: expect.any(String),
+            caseId: testCase.id,
+            type: 'overall',
+            content: expect.any(String),
+            recommendations: expect.any(Array),
+            confidence: expect.any(Number)
+          })
+        }
       });
     });
   });
 
   describe('POST /api/cases/:id/ai-refresh', () => {
-    it('should return 404 for unimplemented endpoint', async () => {
-      const testCaseId = 'test-case-123';
+    it('should return 404 for non-existent case', async () => {
+      const testCaseId = 'non-existent-case-123';
 
       const response = await request(app)
         .post(`/api/cases/${testCaseId}/ai-refresh`)
@@ -487,8 +531,40 @@ describe('API Tests - Case Management Endpoints', () => {
         .expect(404);
 
       expect(response.body).toMatchObject({
-        error: 'API endpoints not yet implemented',
-        message: 'This endpoint will be available in future releases'
+        error: {
+          code: 'CASE_NOT_FOUND',
+          message: `Case with ID ${testCaseId} not found`
+        }
+      });
+    });
+
+    it('should refresh AI insights for existing case', async () => {
+      // Create a test case using our helper
+      const testCase = await testDataHelpers.createTestCase({
+        applicantName: 'Test User',
+        applicantEmail: 'test@example.com',
+        applicationType: 'standard'
+      });
+
+      // Refresh AI insights for the case
+      const response = await request(app)
+        .post(`/api/cases/${testCase.id}/ai-refresh`)
+        .send({})
+        .expect(200);
+
+      expect(response.body).toMatchObject({
+        success: true,
+        data: {
+          aiSummary: expect.objectContaining({
+            id: expect.any(String),
+            caseId: testCase.id,
+            type: 'overall',
+            content: expect.any(String),
+            recommendations: expect.any(Array),
+            confidence: expect.any(Number)
+          })
+        },
+        message: 'AI insights refreshed successfully'
       });
     });
   });
@@ -509,31 +585,71 @@ describe('API Tests - Case Management Endpoints', () => {
   });
 
   describe('GET /api/cases', () => {
-    it('should return 404 for unimplemented endpoint', async () => {
+    it('should retrieve all cases with default pagination', async () => {
+      // Create some test cases first
+      await testDataHelpers.createMultipleTestCases(3);
+
       const response = await request(app)
         .get('/api/cases')
-        .expect(404);
+        .expect(200);
 
       expect(response.body).toMatchObject({
-        error: 'API endpoints not yet implemented',
-        message: 'This endpoint will be available in future releases'
+        success: true,
+        data: {
+          cases: expect.any(Array),
+          total: expect.any(Number),
+          page: 1,
+          limit: 10
+        }
       });
+
+      // Should have the test cases we created
+      expect(response.body.data.total).toBe(3);
+      expect(response.body.data.cases).toHaveLength(3);
     });
 
     it('should handle query parameters for pagination and filtering', async () => {
-      const response = await request(app)
-        .get('/api/cases?status=active&page=1&limit=10&sort=created_at&order=desc')
-        .expect(404);
+      // Create some test cases first
+      await testDataHelpers.createMultipleTestCases(5);
 
-      expect(response.body).toHaveProperty('error');
+      const response = await request(app)
+        .get('/api/cases?status=active&page=1&limit=3')
+        .expect(200);
+
+      expect(response.body).toMatchObject({
+        success: true,
+        data: {
+          cases: expect.any(Array),
+          total: expect.any(Number),
+          page: 1,
+          limit: 3
+        }
+      });
+
+      // Should return cases with active status
+      expect(response.body.data.cases.length).toBeGreaterThan(0);
     });
 
     it('should handle search and filtering parameters', async () => {
-      const response = await request(app)
-        .get('/api/cases?search=john&applicationType=standard&dateFrom=2024-01-01&dateTo=2024-12-31')
-        .expect(404);
+      // Create enough test cases for pagination
+      await testDataHelpers.createMultipleTestCases(8);
 
-      expect(response.body).toHaveProperty('error');
+      const response = await request(app)
+        .get('/api/cases?status=active&page=2&limit=3')
+        .expect(200);
+
+      expect(response.body).toMatchObject({
+        success: true,
+        data: {
+          cases: expect.any(Array),
+          total: expect.any(Number),
+          page: 2,
+          limit: 3
+        }
+      });
+
+      // Should return remaining cases on page 2
+      expect(response.body.data.total).toBeGreaterThan(3);
     });
   });
 

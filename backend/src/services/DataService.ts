@@ -23,25 +23,32 @@ export class DataService {
         this.db = DatabaseConnection.getInstance();
     }
 
+    private getDatabase(): DatabaseConnection {
+        return this.db;
+    }
+
     /**
      * Save a case to the database
      */
     public async saveCase(caseData: CaseModel): Promise<void> {
         try {
-            const stmt = this.db.prepare(`
+            const stmt = this.getDatabase().prepare(`
         INSERT OR REPLACE INTO cases (
           id, application_data, status, current_step, 
           created_at, updated_at, assigned_to
         ) VALUES (?, ?, ?, ?, ?, ?, ?)
       `);
 
+            const createdAtISO = caseData.createdAt.toISOString();
+            const updatedAtISO = caseData.updatedAt.toISOString();
+
             const result = stmt.run(
                 caseData.id,
                 JSON.stringify(caseData.applicationData),
                 caseData.status,
                 caseData.currentStep,
-                caseData.createdAt.toISOString(),
-                caseData.updatedAt.toISOString(),
+                createdAtISO,
+                updatedAtISO,
                 caseData.assignedTo || null
             );
 
@@ -86,7 +93,7 @@ export class DataService {
      */
     public async getCase(caseId: string): Promise<CaseModel | null> {
         try {
-            const stmt = this.db.prepare(`
+            const stmt = this.getDatabase().prepare(`
         SELECT * FROM cases WHERE id = ?
       `);
 
@@ -103,21 +110,24 @@ export class DataService {
                 this.getAuditTrail(caseId)
             ]);
 
-            // Convert database row to CaseModel
             return this.mapDatabaseCaseToModel(caseRow, notes, aiSummaries, auditTrail);
-
         } catch (error) {
             throw new Error(`Failed to get case: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
     }
 
     /**
-     * Update a case's basic information
+     * Update a case with new data
      */
     public async updateCase(caseId: string, updates: Partial<CaseModel>): Promise<void> {
         try {
             const updateFields: string[] = [];
             const updateValues: any[] = [];
+
+            if (updates.applicationData !== undefined) {
+                updateFields.push('application_data = ?');
+                updateValues.push(JSON.stringify(updates.applicationData));
+            }
 
             if (updates.status !== undefined) {
                 updateFields.push('status = ?');
@@ -132,11 +142,6 @@ export class DataService {
             if (updates.assignedTo !== undefined) {
                 updateFields.push('assigned_to = ?');
                 updateValues.push(updates.assignedTo);
-            }
-
-            if (updates.applicationData !== undefined) {
-                updateFields.push('application_data = ?');
-                updateValues.push(JSON.stringify(updates.applicationData));
             }
 
             // Always update the updated_at timestamp (strictly monotonic)
@@ -164,20 +169,19 @@ export class DataService {
             const result = stmt.run(...updateValues);
 
             if (result.changes === 0) {
-                throw new Error(`Case with ID ${caseId} not found or no changes made`);
+                throw new Error(`Case with ID ${caseId} not found`);
             }
-
         } catch (error) {
             throw new Error(`Failed to update case: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
     }
 
     /**
-     * Get cases by status
+     * Get all cases with a specific status
      */
     public async getCasesByStatus(status: CaseStatus): Promise<CaseModel[]> {
         try {
-            const stmt = this.db.prepare(`
+            const stmt = this.getDatabase().prepare(`
         SELECT * FROM cases WHERE status = ? ORDER BY created_at DESC
       `);
 
@@ -195,7 +199,6 @@ export class DataService {
             }
 
             return cases;
-
         } catch (error) {
             throw new Error(`Failed to get cases by status: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
@@ -206,7 +209,7 @@ export class DataService {
      */
     public async getAllCases(): Promise<CaseModel[]> {
         try {
-            const stmt = this.db.prepare(`
+            const stmt = this.getDatabase().prepare(`
         SELECT * FROM cases ORDER BY created_at DESC
       `);
 
@@ -224,7 +227,6 @@ export class DataService {
             }
 
             return cases;
-
         } catch (error) {
             throw new Error(`Failed to get all cases: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
@@ -235,10 +237,9 @@ export class DataService {
      */
     public async saveSummary(summary: AISummaryModel): Promise<void> {
         try {
-            const stmt = this.db.prepare(`
+            const stmt = this.getDatabase().prepare(`
         INSERT OR REPLACE INTO ai_summaries (
-          id, case_id, type, step, content, recommendations, 
-          confidence, generated_at, version
+          id, case_id, type, step, content, recommendations, version, confidence, generated_at
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
       `);
 
@@ -248,16 +249,15 @@ export class DataService {
                 summary.type,
                 summary.step || null,
                 summary.content,
-                JSON.stringify(summary.recommendations),
-                summary.confidence,
-                summary.generatedAt.toISOString(),
-                summary.version
+                JSON.stringify(summary.recommendations || []),
+                summary.version,
+                summary.confidence || 0.8,
+                summary.generatedAt.toISOString()
             );
 
             if (result.changes === 0) {
                 throw new Error(`Failed to save AI summary with ID: ${summary.id}`);
             }
-
         } catch (error) {
             throw new Error(`Failed to save AI summary: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
@@ -268,24 +268,20 @@ export class DataService {
      */
     public async getSummaries(caseId: string, type?: 'overall' | 'step-specific'): Promise<AISummaryModel[]> {
         try {
-            let sql = `
-        SELECT * FROM ai_summaries 
-        WHERE case_id = ?
-      `;
+            let sql = 'SELECT * FROM ai_summaries WHERE case_id = ?';
             const params: any[] = [caseId];
 
             if (type) {
-                sql += ` AND type = ?`;
+                sql += ' AND type = ?';
                 params.push(type);
             }
 
-            sql += ` ORDER BY generated_at DESC`;
+            sql += ' ORDER BY generated_at DESC';
 
-            const stmt = this.db.prepare(sql);
+            const stmt = this.getDatabase().prepare(sql);
             const summaryRows = stmt.all(...params) as AISummary[];
 
-            return summaryRows.map(this.mapDatabaseSummaryToModel);
-
+            return summaryRows.map(summary => this.mapDatabaseSummaryToModel(summary));
         } catch (error) {
             throw new Error(`Failed to get AI summaries: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
@@ -296,17 +292,24 @@ export class DataService {
      */
     public async logActivity(activity: ActivityLog): Promise<void> {
         try {
-            const auditEntry: AuditEntry = {
-                id: activity.id,
-                case_id: activity.caseId,
-                action: activity.action,
-                ...(activity.details && { details: JSON.stringify(activity.details) }),
-                user_id: activity.userId,
-                timestamp: activity.timestamp.toISOString()
-            };
+            const stmt = this.getDatabase().prepare(`
+        INSERT INTO audit_trail (
+          id, case_id, action, details, user_id, timestamp
+        ) VALUES (?, ?, ?, ?, ?, ?)
+      `);
 
-            await this.saveAuditEntry(auditEntry);
+            const result = stmt.run(
+                activity.id,
+                activity.caseId,
+                activity.action,
+                activity.details ? JSON.stringify(activity.details) : null,
+                activity.userId,
+                activity.timestamp.toISOString()
+            );
 
+            if (result.changes === 0) {
+                throw new Error(`Failed to log activity with ID: ${activity.id}`);
+            }
         } catch (error) {
             throw new Error(`Failed to log activity: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
@@ -317,11 +320,9 @@ export class DataService {
      */
     public async logAIInteraction(interaction: AIInteractionModel): Promise<void> {
         try {
-            const stmt = this.db.prepare(`
+            const stmt = this.getDatabase().prepare(`
         INSERT INTO ai_interactions (
-          id, case_id, operation, prompt, response, model, 
-          tokens_used, cost, duration, success, error, timestamp,
-          step_context, prompt_template, prompt_version
+          id, case_id, operation, prompt, response, model, tokens_used, cost, duration, success, error, timestamp, step_context, prompt_template, prompt_version
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `);
 
@@ -332,10 +333,10 @@ export class DataService {
                 interaction.prompt,
                 interaction.response,
                 interaction.model,
-                interaction.tokensUsed || null,
+                interaction.tokensUsed,
                 interaction.cost || null,
                 interaction.duration,
-                interaction.success ? 1 : 0, // Convert boolean to integer
+                interaction.success ? 1 : 0,
                 interaction.error || null,
                 interaction.timestamp.toISOString(),
                 interaction.stepContext || null,
@@ -346,7 +347,6 @@ export class DataService {
             if (result.changes === 0) {
                 throw new Error(`Failed to log AI interaction with ID: ${interaction.id}`);
             }
-
         } catch (error) {
             throw new Error(`Failed to log AI interaction: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
@@ -357,16 +357,14 @@ export class DataService {
      */
     public async getAIInteractionHistory(caseId: string): Promise<AIInteractionModel[]> {
         try {
-            const stmt = this.db.prepare(`
+            const stmt = this.getDatabase().prepare(`
         SELECT * FROM ai_interactions 
         WHERE case_id = ? 
         ORDER BY timestamp DESC
       `);
 
             const interactionRows = stmt.all(caseId) as AIInteraction[];
-
-            return interactionRows.map(this.mapDatabaseInteractionToModel);
-
+            return interactionRows.map(interaction => this.mapDatabaseInteractionToModel(interaction));
         } catch (error) {
             throw new Error(`Failed to get AI interaction history: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
@@ -377,14 +375,13 @@ export class DataService {
      */
     public async getAuditTrail(caseId: string): Promise<AuditEntry[]> {
         try {
-            const stmt = this.db.prepare(`
+            const stmt = this.getDatabase().prepare(`
         SELECT * FROM audit_trail 
         WHERE case_id = ? 
         ORDER BY timestamp DESC
       `);
 
             return stmt.all(caseId) as AuditEntry[];
-
         } catch (error) {
             throw new Error(`Failed to get audit trail: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
@@ -395,14 +392,14 @@ export class DataService {
      */
     public async addCaseNote(caseId: string, content: string, userId: string): Promise<void> {
         try {
-            const noteId = randomUUID();
-            const stmt = this.db.prepare(`
-        INSERT INTO case_notes (id, case_id, content, created_by, created_at)
-        VALUES (?, ?, ?, ?, ?)
+            const stmt = this.getDatabase().prepare(`
+        INSERT INTO case_notes (
+          id, case_id, content, created_by, created_at
+        ) VALUES (?, ?, ?, ?, ?)
       `);
 
             const result = stmt.run(
-                noteId,
+                randomUUID(),
                 caseId,
                 content,
                 userId,
@@ -410,65 +407,88 @@ export class DataService {
             );
 
             if (result.changes === 0) {
-                throw new Error(`Failed to add case note for case ID: ${caseId}`);
+                throw new Error(`Failed to add case note for case: ${caseId}`);
             }
-
         } catch (error) {
             throw new Error(`Failed to add case note: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
     }
 
     /**
-     * Execute operations within a transaction
+     * Execute operations in a transaction
      */
     public transaction<T>(operations: () => T): T {
-        return this.db.transaction(operations);
+        return this.getDatabase().transaction(operations);
     }
 
     // Private helper methods
 
+    /**
+     * Get case notes for a case
+     */
     public async getCaseNotes(caseId: string): Promise<CaseNote[]> {
-        const stmt = this.db.prepare(`
-      SELECT * FROM case_notes 
-      WHERE case_id = ? 
-      ORDER BY created_at ASC
-    `);
-        return stmt.all(caseId) as CaseNote[];
+        try {
+            const stmt = this.getDatabase().prepare(`
+        SELECT * FROM case_notes 
+        WHERE case_id = ? 
+        ORDER BY created_at DESC
+      `);
+
+            return stmt.all(caseId) as CaseNote[];
+        } catch (error) {
+            throw new Error(`Failed to get case notes: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
     }
 
+    /**
+     * Get AI summaries for a case (private method)
+     */
     private async getCaseSummaries(caseId: string): Promise<AISummary[]> {
-        const stmt = this.db.prepare(`
-      SELECT * FROM ai_summaries 
-      WHERE case_id = ? 
-      ORDER BY generated_at DESC
-    `);
-        return stmt.all(caseId) as AISummary[];
+        try {
+            const stmt = this.getDatabase().prepare(`
+        SELECT * FROM ai_summaries 
+        WHERE case_id = ? 
+        ORDER BY generated_at DESC
+      `);
+
+            return stmt.all(caseId) as AISummary[];
+        } catch (error) {
+            throw new Error(`Failed to get case summaries: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
     }
 
-    private saveCaseNotes(caseId: string, notes: any[]): void {
-        const stmt = this.db.prepare(`
-      INSERT OR REPLACE INTO case_notes (id, case_id, content, created_by, created_at)
-      VALUES (?, ?, ?, ?, ?)
-    `);
+    /**
+     * Save case notes (private method)
+     */
+    private saveCaseNotes(caseId: string, notes: Array<{ id?: string; content: string; createdBy?: string; createdAt?: Date }>): void {
+        const stmt = this.getDatabase().prepare(`
+        INSERT OR REPLACE INTO case_notes (
+          id, case_id, content, created_by, created_at
+        ) VALUES (?, ?, ?, ?, ?)
+      `);
 
         for (const note of notes) {
             stmt.run(
-                note.id,
+                note.id || randomUUID(),
                 caseId,
                 note.content,
-                note.createdBy,
-                note.createdAt instanceof Date ? note.createdAt.toISOString() : note.createdAt
+                note.createdBy || 'system',
+                note.createdAt ? note.createdAt.toISOString() : new Date().toISOString()
             );
         }
     }
 
+    /**
+     * Save audit entry (private method)
+     */
     private saveAuditEntry(entry: AuditEntry): void {
-        const stmt = this.db.prepare(`
-      INSERT OR REPLACE INTO audit_trail (id, case_id, action, details, user_id, timestamp)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `);
+        const stmt = this.getDatabase().prepare(`
+        INSERT OR REPLACE INTO audit_trail (
+          id, case_id, action, details, user_id, timestamp
+        ) VALUES (?, ?, ?, ?, ?, ?)
+      `);
 
-        const result = stmt.run(
+        stmt.run(
             entry.id,
             entry.case_id,
             entry.action,
@@ -476,10 +496,6 @@ export class DataService {
             entry.user_id,
             entry.timestamp
         );
-
-        if (result.changes === 0) {
-            throw new Error(`Failed to save audit entry with ID: ${entry.id}`);
-        }
     }
 
     private mapDatabaseCaseToModel(
@@ -488,13 +504,16 @@ export class DataService {
         aiSummaries: AISummary[],
         auditTrail: AuditEntry[]
     ): CaseModel {
+        const createdAt = new Date(caseRow.created_at);
+        const updatedAt = new Date(caseRow.updated_at);
+
         return {
             id: caseRow.id,
             applicationData: this.mapDatabaseApplicationDataToModel(JSON.parse(caseRow.application_data)),
             status: caseRow.status,
             currentStep: caseRow.current_step,
-            createdAt: new Date(caseRow.created_at),
-            updatedAt: new Date(caseRow.updated_at),
+            createdAt,
+            updatedAt,
             ...(caseRow.assigned_to && { assignedTo: caseRow.assigned_to }),
             notes: notes.map(note => ({
                 id: note.id,
@@ -518,7 +537,7 @@ export class DataService {
 
 
     private mapDatabaseSummaryToModel(summaryRow: AISummary): AISummaryModel {
-        return {
+        const mappedSummary = {
             id: summaryRow.id,
             caseId: summaryRow.case_id,
             type: summaryRow.type,
@@ -529,10 +548,12 @@ export class DataService {
             generatedAt: new Date(summaryRow.generated_at),
             version: summaryRow.version
         };
+
+        return mappedSummary;
     }
 
     private mapDatabaseInteractionToModel(interactionRow: AIInteraction): AIInteractionModel {
-        return {
+        const mappedInteraction = {
             id: interactionRow.id,
             caseId: interactionRow.case_id,
             operation: interactionRow.operation,
@@ -549,23 +570,25 @@ export class DataService {
             ...(interactionRow.prompt_template && { promptTemplate: interactionRow.prompt_template }),
             ...(interactionRow.prompt_version && { promptVersion: interactionRow.prompt_version })
         };
+
+        return mappedInteraction;
     }
 
-    private mapDatabaseApplicationDataToModel(dbAppData: any): import('../types/index.js').ApplicationData {
+    private mapDatabaseApplicationDataToModel(dbAppData: Record<string, unknown>): import('../types/index.js').ApplicationData {
         return {
-            applicantName: dbAppData.applicantName,
-            applicantEmail: dbAppData.applicantEmail,
-            applicationType: dbAppData.applicationType,
-            submissionDate: new Date(dbAppData.submissionDate),
-            documents: dbAppData.documents?.map((doc: any) => ({
-                id: doc.id,
-                filename: doc.filename,
-                path: doc.path,
-                size: doc.size,
-                mimeType: doc.mimeType,
-                uploadedAt: new Date(doc.uploadedAt)
+            applicantName: dbAppData.applicantName as string,
+            applicantEmail: dbAppData.applicantEmail as string,
+            applicationType: dbAppData.applicationType as string,
+            submissionDate: new Date(dbAppData.submissionDate as string),
+            documents: (dbAppData.documents as Array<Record<string, unknown>>)?.map((doc: Record<string, unknown>) => ({
+                id: doc.id as string,
+                filename: doc.filename as string,
+                path: doc.path as string,
+                size: doc.size as number,
+                mimeType: doc.mimeType as string,
+                uploadedAt: new Date(doc.uploadedAt as string)
             })) || [],
-            formData: dbAppData.formData || {}
+            formData: dbAppData.formData as Record<string, unknown> || {}
         };
     }
 }
