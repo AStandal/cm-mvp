@@ -309,53 +309,57 @@ const CaseList = () => {
                   <h3 className="text-lg font-medium text-gray-900 mb-2">Sort Cases</h3>
                   <p className="text-sm text-gray-600">Click any criteria to sort. Click again to reverse order.</p>
                 </div>
-                <div className="flex items-center space-x-2">
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => handleSortChange('updatedAt', 'desc')}
-                    className="text-xs transition-all duration-200 hover:scale-105"
-                  >
-                    Reset to Default
-                  </Button>
-                </div>
               </div>
               
               {/* Sort Criteria Buttons */}
-              <div className="mt-4 flex flex-wrap gap-2">
-                {sortFields.map((field) => {
-                  const isActive = sortField === field.value;
-                  const isAscending = isActive && sortDirection === 'asc';
-                  
-                  return (
-                    <Button
-                      key={field.value}
-                      variant={isActive ? 'primary' : 'secondary'}
-                      size="sm"
-                      onClick={() => {
-                        if (isActive) {
-                          // If already active, toggle direction
-                          handleSortChange(field.value, sortDirection === 'asc' ? 'desc' : 'asc');
-                        } else {
-                          // If not active, set as active with default direction (desc for most fields, asc for names)
-                          const defaultDirection = field.value === 'applicantName' ? 'asc' : 'desc';
-                          handleSortChange(field.value, defaultDirection);
-                        }
-                      }}
-                      className={`flex items-center justify-between transition-all duration-200 ${
-                        isActive ? 'ring-2 ring-blue-500 scale-105' : 'hover:scale-102'
-                      }`}
-                      title={`Sort by ${field.label}${isActive ? ` (${sortDirection === 'asc' ? 'A-Z' : 'Z-A'})` : ''}`}
-                    >
-                      <span className="truncate">{field.label}</span>
-                      {isActive && (
-                        <span className="ml-2 text-sm">
-                          {isAscending ? '↑' : '↓'}
-                        </span>
-                      )}
-                    </Button>
-                  );
-                })}
+              <div className="mt-4 flex flex-wrap gap-2 items-center justify-between">
+                <div className="flex flex-wrap gap-2">
+                  {sortFields.map((field) => {
+                    const isActive = sortField === field.value;
+                    const isAscending = isActive && sortDirection === 'asc';
+                    
+                    return (
+                      <Button
+                        key={field.value}
+                        variant={isActive ? 'primary' : 'secondary'}
+                        size="sm"
+                        onClick={() => {
+                          if (isActive) {
+                            // If already active, toggle direction
+                            handleSortChange(field.value, sortDirection === 'asc' ? 'desc' : 'asc');
+                          } else {
+                            // If not active, set as active with default direction (desc for most fields, asc for names)
+                            const defaultDirection = field.value === 'applicantName' ? 'asc' : 'desc';
+                            handleSortChange(field.value, defaultDirection);
+                          }
+                        }}
+                        className={`flex items-center justify-between transition-all duration-200 ${
+                          isActive ? 'ring-2 ring-blue-500 scale-105' : 'hover:scale-102'
+                        }`}
+                        title={`Sort by ${field.label}${isActive ? ` (${sortDirection === 'asc' ? 'A-Z' : 'Z-A'})` : ''}`}
+                      >
+                        <span className="truncate">{field.label}</span>
+                        {isActive && (
+                          <span className="ml-2 text-sm">
+                            {isAscending ? '↑' : '↓'}
+                          </span>
+                        )}
+                      </Button>
+                    );
+                  })}
+                </div>
+                
+                {/* Reset to Default Button */}
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => handleSortChange('updatedAt', 'desc')}
+                  className="text-xs transition-all duration-200 hover:scale-105 flex-shrink-0"
+                  title="Reset to default sorting"
+                  aria-label="Reset to default sorting"
+                >
+                  Reset
+                </Button>
               </div>
             </Card>
           </div>
