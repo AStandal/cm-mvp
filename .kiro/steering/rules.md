@@ -8,7 +8,7 @@
   - Unit tests with Vitest
   - End-to-end tests with Playwright
   - Build verification for both projects
-- If verification fails, fix all issues before considering the task complete
+- If verification fails, fix all issues before considering the task complete.
 - This ensures code quality and prevents regressions in the codebase
 
 - When asked to review the current implementation of a task, use git status and git diff to view the current changes.

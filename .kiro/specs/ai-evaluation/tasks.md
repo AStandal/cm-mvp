@@ -13,12 +13,12 @@
   - Add foreign key to evaluation_datasets table
   - _Requirements: 1.1, 1.4_
 
-- [ ] 1.3 Define basic evaluation TypeScript interfaces
+- [x] 1.3 Define basic evaluation TypeScript interfaces
   - Create EvaluationDataset and EvaluationExample interfaces
   - Add basic validation schemas
   - _Requirements: 1.1_
 
-- [ ] 1.4 Create basic EvaluationService class
+- [x] 1.4 Create basic EvaluationService class
   - Implement EvaluationService constructor with DataService dependency
   - Add createDataset method for basic dataset creation
   - Add getDataset and listDatasets methods for retrieval
