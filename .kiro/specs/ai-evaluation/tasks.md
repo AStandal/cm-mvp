@@ -42,10 +42,11 @@
   - Add dataset listing and details display
   - _Requirements: 1.1_
 
-- [ ] 1.8 Write basic tests for Phase 1
-  - Test dataset creation and example management
-  - Test API endpoints with realistic data
-  - Create end-to-end test: CLI → API → Database → Results
+- [x] 1.8 Write comprehensive integration tests for Phase 1
+  - Create end-to-end integration test: CLI → API → Database → Results workflow
+  - Add database schema validation tests for evaluation tables
+  - Add TypeScript interface and Zod schema validation tests
+  - Add real CLI execution tests (not just service simulation)
   - _Requirements: 1.1, 1.4_
 
 **🎯 MILESTONE 1**: Can create datasets, add examples, and retrieve them via CLI and API
