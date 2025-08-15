@@ -104,9 +104,114 @@ export const AddExampleRequestSchema = z.object({
   }).default({})
 });
 
+// Judge Evaluation Schemas
+export const JudgeEvaluationScoresSchema = z.object({
+  overall: z.number().min(1).max(10),
+  faithfulness: z.number().min(1).max(10),
+  completeness: z.number().min(1).max(10),
+  relevance: z.number().min(1).max(10),
+  clarity: z.number().min(1).max(10),
+  taskSpecific: z.record(z.string(), z.number().min(1).max(10)).optional()
+});
+
+export const JudgeEvaluationReasoningSchema = z.object({
+  overall: z.string().min(1),
+  faithfulness: z.string().min(1),
+  completeness: z.string().min(1),
+  relevance: z.string().min(1),
+  clarity: z.string().min(1),
+  taskSpecific: z.record(z.string(), z.string()).optional()
+});
+
+export const JudgeEvaluationMetadataSchema = z.object({
+  evaluatedAt: z.date(),
+  evaluationDuration: z.number().nonnegative(),
+  evaluationCost: z.number().nonnegative().optional(),
+  evaluationTokens: z.number().int().nonnegative().optional(),
+  confidence: z.number().min(0).max(1),
+  flags: z.array(z.string()).default([])
+});
+
+export const JudgeEvaluationResultSchema = z.object({
+  id: z.string().min(1),
+  interactionId: z.string().min(1),
+  evaluationModel: z.string().min(1),
+  scores: JudgeEvaluationScoresSchema,
+  reasoning: JudgeEvaluationReasoningSchema,
+  metadata: JudgeEvaluationMetadataSchema
+});
+
+export const JudgeEvaluationInputSchema = z.object({
+  interactionId: z.string().min(1),
+  evaluationModel: z.string().min(1),
+  criteria: z.array(z.enum(['faithfulness', 'completeness', 'relevance', 'clarity'])).default(['faithfulness', 'completeness', 'relevance', 'clarity']),
+  customCriteria: z.record(z.string(), z.string()).optional(),
+  promptTemplate: z.string().optional(),
+  fewShotExamples: z.array(z.object({
+    input: z.string(),
+    output: z.string(),
+    score: z.number().min(1).max(10),
+    reasoning: z.string()
+  })).optional()
+});
+
+export const EvaluateOutputRequestSchema = z.object({
+  input: JudgeEvaluationInputSchema,
+  options: z.object({
+    includeBiasMitigation: z.boolean().default(true),
+    includeChainOfThought: z.boolean().default(true),
+    maxRetries: z.number().int().min(0).max(5).default(3),
+    timeoutMs: z.number().int().positive().default(30000)
+  }).default({})
+});
+
+export const BatchEvaluateRequestSchema = z.object({
+  inputs: z.array(JudgeEvaluationInputSchema).min(1).max(100),
+  evaluationModel: z.string().min(1),
+  options: z.object({
+    includeBiasMitigation: z.boolean().default(true),
+    includeChainOfThought: z.boolean().default(true),
+    maxRetries: z.number().int().min(0).max(5).default(3),
+    timeoutMs: z.number().int().positive().default(30000),
+    rateLimitDelayMs: z.number().int().nonnegative().default(1000)
+  }).default({})
+});
+
+export const EvaluationModelConfigSchema = z.object({
+  modelName: z.string().min(1),
+  provider: z.enum(['openrouter', 'openai', 'anthropic']).default('openrouter'),
+  temperature: z.number().min(0).max(2).default(0.1),
+  maxTokens: z.number().int().positive().default(2000),
+  topP: z.number().min(0).max(1).optional(),
+  frequencyPenalty: z.number().min(-2).max(2).optional(),
+  presencePenalty: z.number().min(-2).max(2).optional()
+});
+
+export const AvailableEvaluationModelSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().min(1),
+  provider: z.string().min(1),
+  description: z.string().optional(),
+  costPer1kTokens: z.number().nonnegative().optional(),
+  maxTokens: z.number().int().positive().optional(),
+  supportedCriteria: z.array(z.string()).default(['faithfulness', 'completeness', 'relevance', 'clarity']),
+  recommended: z.boolean().default(false)
+});
+
 // Type inference from schemas
 export type CreateDatasetRequest = z.infer<typeof CreateDatasetRequestSchema>;
 export type AddExampleRequest = z.infer<typeof AddExampleRequestSchema>;
 export type EvaluationCriteria = z.infer<typeof EvaluationCriteriaSchema>;
 export type EvaluationInput = z.infer<typeof EvaluationInputSchema>;
 export type EvaluationExpectedOutput = z.infer<typeof EvaluationExpectedOutputSchema>;
+
+// Judge Evaluation Types
+export type JudgeEvaluationScores = z.infer<typeof JudgeEvaluationScoresSchema>;
+export type JudgeEvaluationReasoning = z.infer<typeof JudgeEvaluationReasoningSchema>;
+export type JudgeEvaluationMetadata = z.infer<typeof JudgeEvaluationMetadataSchema>;
+export type JudgeEvaluationResult = z.infer<typeof JudgeEvaluationResultSchema>;
+export type JudgeEvaluationInput = z.infer<typeof JudgeEvaluationInputSchema>;
+export type EvaluateOutputRequest = z.infer<typeof EvaluateOutputRequestSchema>;
+export type BatchEvaluateRequest = z.infer<typeof BatchEvaluateRequestSchema>;
+export type EvaluationModelConfig = z.infer<typeof EvaluationModelConfigSchema>;
+export type AvailableEvaluationModel = z.infer<typeof AvailableEvaluationModelSchema>;

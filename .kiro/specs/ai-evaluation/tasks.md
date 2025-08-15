@@ -51,13 +51,13 @@
 ## Phase 2: LLM-as-a-Judge Evaluation (Testable E2E)
 **Goal**: Evaluate AI outputs using LLM judges with scoring
 
-- [ ] 2.1 Create judge evaluations database table
+- [x] 2.1 Create judge evaluations database table
   - Add judge_evaluations table with interaction_id, evaluation_model, scores, reasoning columns
   - Link to existing ai_interactions table via foreign key
   - Add database schema migration and update DatabaseSchema class
   - _Requirements: 2.1, 2.2_
 
-- [ ] 2.2 Define judge evaluation TypeScript interfaces
+- [x] 2.2 Define judge evaluation TypeScript interfaces
   - Create JudgeEvaluationResult interface with scoring criteria
   - Add evaluation input/output interfaces in types/evaluation.ts
   - Add Zod validation schemas for judge evaluation requests/responses

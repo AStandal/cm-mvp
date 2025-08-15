@@ -21,6 +21,7 @@ export class DatabaseSchema {
                 this.createAIInteractionsTable();
                 this.createEvaluationDatasetsTable();
                 this.createEvaluationExamplesTable();
+                this.createJudgeEvaluationsTable();
 
                 // Create indexes within the same transaction to ensure tables exist
                 this.createIndexesInTransaction();
@@ -28,7 +29,7 @@ export class DatabaseSchema {
 
             // Verify all tables were created
             const tables = this.listTables();
-            const requiredTables = ['cases', 'ai_summaries', 'case_notes', 'audit_trail', 'ai_interactions', 'evaluation_datasets', 'evaluation_examples'];
+            const requiredTables = ['cases', 'ai_summaries', 'case_notes', 'audit_trail', 'ai_interactions', 'evaluation_datasets', 'evaluation_examples', 'judge_evaluations'];
             const missingTables = requiredTables.filter(table => !tables.includes(table));
 
             if (missingTables.length > 0) {
@@ -166,6 +167,23 @@ export class DatabaseSchema {
         console.log('Created evaluation_examples table');
     }
 
+    private createJudgeEvaluationsTable(): void {
+        const sql = `
+      CREATE TABLE IF NOT EXISTS judge_evaluations (
+        id TEXT PRIMARY KEY,
+        interaction_id TEXT NOT NULL,
+        evaluation_model TEXT NOT NULL,
+        scores TEXT NOT NULL,
+        reasoning TEXT NOT NULL,
+        metadata TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (interaction_id) REFERENCES ai_interactions(id) ON DELETE CASCADE
+      );
+    `;
+        this.db.exec(sql);
+        console.log('Created judge_evaluations table');
+    }
+
     private createIndexesInTransaction(): void {
         const indexes = [
             'CREATE INDEX IF NOT EXISTS idx_cases_status ON cases(status);',
@@ -184,7 +202,10 @@ export class DatabaseSchema {
             'CREATE INDEX IF NOT EXISTS idx_ai_interactions_timestamp ON ai_interactions(timestamp);',
             'CREATE INDEX IF NOT EXISTS idx_evaluation_datasets_operation ON evaluation_datasets(operation);',
             'CREATE INDEX IF NOT EXISTS idx_evaluation_datasets_created_at ON evaluation_datasets(created_at);',
-            'CREATE INDEX IF NOT EXISTS idx_evaluation_examples_dataset_id ON evaluation_examples(dataset_id);'
+            'CREATE INDEX IF NOT EXISTS idx_evaluation_examples_dataset_id ON evaluation_examples(dataset_id);',
+            'CREATE INDEX IF NOT EXISTS idx_judge_evaluations_interaction_id ON judge_evaluations(interaction_id);',
+            'CREATE INDEX IF NOT EXISTS idx_judge_evaluations_evaluation_model ON judge_evaluations(evaluation_model);',
+            'CREATE INDEX IF NOT EXISTS idx_judge_evaluations_created_at ON judge_evaluations(created_at);'
         ];
 
         indexes.forEach(indexSql => {
@@ -208,7 +229,7 @@ export class DatabaseSchema {
         try {
             // Use a transaction to ensure atomicity
             this.db.transaction(() => {
-                const tables = ['evaluation_examples', 'evaluation_datasets', 'ai_interactions', 'audit_trail', 'case_notes', 'ai_summaries', 'cases'];
+                const tables = ['judge_evaluations', 'evaluation_examples', 'evaluation_datasets', 'ai_interactions', 'audit_trail', 'case_notes', 'ai_summaries', 'cases'];
                 tables.forEach(table => {
                     this.db.exec(`DROP TABLE IF EXISTS ${table};`);
                 });
@@ -238,7 +259,7 @@ export class DatabaseSchema {
 
     public validateSchema(): boolean {
         try {
-            const expectedTables = ['cases', 'ai_summaries', 'case_notes', 'audit_trail', 'ai_interactions', 'evaluation_datasets', 'evaluation_examples'];
+            const expectedTables = ['cases', 'ai_summaries', 'case_notes', 'audit_trail', 'ai_interactions', 'evaluation_datasets', 'evaluation_examples', 'judge_evaluations'];
             const actualTables = this.listTables();
 
             // Check if all expected tables exist
