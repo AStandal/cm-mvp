@@ -8,7 +8,7 @@
   - Add foreign key constraints and basic indexes
   - _Requirements: 1.1, 1.2_
 
-- [ ] 1.2 Create evaluation examples database table
+- [x] 1.2 Create evaluation examples database table
   - Add evaluation_examples table with dataset_id, input_data, expected_output columns
   - Add foreign key to evaluation_datasets table
   - _Requirements: 1.1, 1.4_

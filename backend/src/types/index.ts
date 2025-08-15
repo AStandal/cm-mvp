@@ -195,5 +195,66 @@ export interface DataService {
   getAIInteractionHistory(caseId: string): Promise<AIInteraction[]>;
 }
 
+// AI Evaluation Framework Types
+export type AIOperation = 'generate_summary' | 'generate_recommendation' | 'analyze_application' | 'generate_final_summary' | 'validate_completeness' | 'detect_missing_fields';
+
+export type DifficultyLevel = 'easy' | 'medium' | 'hard';
+export type DatasetSourceType = 'manual' | 'captured_interactions' | 'synthetic';
+
+export interface EvaluationDataset {
+  id: string;
+  name: string;
+  description: string;
+  operation: AIOperation;
+  examples: EvaluationExample[];
+  metadata: {
+    createdBy: string;
+    createdAt: Date;
+    updatedAt: Date;
+    version: number;
+    tags: string[];
+    difficulty: DifficultyLevel;
+    sourceType: DatasetSourceType;
+  };
+  statistics: {
+    totalExamples: number;
+    averageQuality: number;
+    difficultyDistribution: Record<string, number>;
+  };
+}
+
+export interface EvaluationExample {
+  id: string;
+  datasetId: string;
+  input: {
+    caseData?: Case;
+    applicationData?: ApplicationData;
+    step?: ProcessStep;
+    context?: Record<string, any>;
+    prompt?: string;
+  };
+  expectedOutput: {
+    content: string;
+    quality: number; // 1-10 scale
+    criteria: {
+      faithfulness: number;
+      completeness: number;
+      relevance: number;
+      clarity: number;
+      taskSpecific?: Record<string, number>;
+    };
+  };
+  metadata: {
+    tags: string[];
+    difficulty: DifficultyLevel;
+    createdAt: Date;
+    sourceInteractionId?: string;
+    notes?: string;
+  };
+}
+
 // Re-export OpenRouter types
 export * from './openrouter.js';
+
+// Re-export Evaluation types and schemas
+export * from './evaluation.js';
