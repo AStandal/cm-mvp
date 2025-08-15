@@ -182,15 +182,29 @@ describe('API Tests - Documentation and System Endpoints', () => {
     });
 
     it('should document all evaluation endpoints', async () => {
-      const evaluationEndpoints = [
-        '/api/evaluation/datasets',
+      // Test implemented endpoints
+      const implementedEndpoints = [
+        '/api/evaluation/datasets'
+      ];
+
+      for (const endpoint of implementedEndpoints) {
+        const response = await request(app)
+          .get(endpoint);
+
+        // The endpoint is implemented, so it should not return 404
+        expect(response.status).not.toBe(404);
+        expect(response.headers['content-type']).toMatch(/application\/json/);
+      }
+
+      // Test unimplemented endpoints
+      const unimplementedEndpoints = [
         '/api/evaluation/run',
         '/api/evaluation/compare',
         '/api/evaluation/feedback',
         '/api/evaluation/benchmark'
       ];
 
-      for (const endpoint of evaluationEndpoints) {
+      for (const endpoint of unimplementedEndpoints) {
         const response = await request(app)
           .get(endpoint)
           .expect(404);

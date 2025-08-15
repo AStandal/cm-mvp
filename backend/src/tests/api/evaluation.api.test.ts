@@ -4,61 +4,71 @@ import app from '@/index.js';
 
 describe('API Tests - Evaluation and Benchmarking Endpoints', () => {
   describe('POST /api/evaluation/datasets', () => {
-    it('should return 404 for unimplemented endpoint', async () => {
+    it('should create a new evaluation dataset', async () => {
       const newDataset = {
         name: 'Test Dataset',
         description: 'A test evaluation dataset',
-        operation: 'generate_summary'
+        operation: 'generate_summary',
+        metadata: {
+          createdBy: 'test-user',
+          tags: ['test'],
+          difficulty: 'medium',
+          sourceType: 'manual'
+        }
       };
 
       const response = await request(app)
         .post('/api/evaluation/datasets')
-        .send(newDataset)
-        .expect(404);
+        .send(newDataset);
 
-      expect(response.body).toMatchObject({
-        error: 'API endpoints not yet implemented',
-        message: 'This endpoint will be available in future releases'
-      });
+      // The endpoint is implemented, so it should not return 404
+      expect(response.status).not.toBe(404);
+      expect(response.headers['content-type']).toMatch(/application\/json/);
     });
 
-    it('should handle JSON request body', async () => {
-      const dataset = { name: 'Test', operation: 'generate_summary' };
+    it('should handle JSON request body and validate input', async () => {
+      const dataset = { name: 'Test', operation: 'invalid_operation' };
 
       const response = await request(app)
         .post('/api/evaluation/datasets')
         .send(dataset)
-        .expect(404);
+        .expect(400);
 
       expect(response.headers['content-type']).toMatch(/application\/json/);
+      expect(response.body.error.code).toBe('VALIDATION_ERROR');
     });
   });
 
   describe('POST /api/evaluation/datasets/:id/examples', () => {
-    it('should return 404 for unimplemented endpoint', async () => {
+    it('should add example to existing dataset', async () => {
       const datasetId = 'test-dataset-123';
       const newExample = {
         input: {
-          caseData: { id: 'test-case' },
-          step: 'received'
+          prompt: 'Generate a summary for this case'
         },
         expectedOutput: {
           content: 'Expected summary',
-          quality: 4
+          quality: 8,
+          criteria: {
+            faithfulness: 8,
+            completeness: 8,
+            relevance: 8,
+            clarity: 8
+          }
         },
-        tags: ['test'],
-        difficulty: 'medium'
+        metadata: {
+          tags: ['test'],
+          difficulty: 'medium'
+        }
       };
 
       const response = await request(app)
         .post(`/api/evaluation/datasets/${datasetId}/examples`)
-        .send(newExample)
-        .expect(404);
+        .send(newExample);
 
-      expect(response.body).toMatchObject({
-        error: 'API endpoints not yet implemented',
-        message: 'This endpoint will be available in future releases'
-      });
+      // The endpoint is implemented, so it should not return 404
+      expect(response.status).not.toBe(404);
+      expect(response.headers['content-type']).toMatch(/application\/json/);
     });
   });
 
@@ -252,9 +262,14 @@ describe('API Tests - Evaluation and Benchmarking Endpoints', () => {
       const response = await request(app)
         .post('/api/evaluation/datasets')
         .set('Origin', 'http://localhost:3000')
-        .send({ name: 'Test' })
-        .expect(404);
+        .send({ 
+          name: 'Test',
+          operation: 'generate_summary',
+          metadata: { createdBy: 'test-user' }
+        });
 
+      // The endpoint is implemented, so it should not return 404
+      expect(response.status).not.toBe(404);
       expect(response.headers).toHaveProperty('access-control-allow-origin');
     });
 

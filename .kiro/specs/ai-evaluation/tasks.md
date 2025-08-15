@@ -24,13 +24,13 @@
   - Add getDataset and listDatasets methods for retrieval
   - _Requirements: 1.1_
 
-- [ ] 1.5 Add dataset example management to EvaluationService
+- [x] 1.5 Add dataset example management to EvaluationService
   - Implement addExampleToDataset method for manual example addition
   - Add getDatasetExamples method for example retrieval
   - Add basic validation for example data format
   - _Requirements: 1.4_
 
-- [ ] 1.6 Create dataset management API endpoints
+- [x] 1.6 Create dataset management API endpoints
   - Add POST /api/evaluation/datasets endpoint for dataset creation
   - Add GET /api/evaluation/datasets endpoint for listing datasets
   - Add POST /api/evaluation/datasets/:id/examples endpoint for adding examples

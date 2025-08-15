@@ -85,7 +85,6 @@ describe('API Behavior and Schema Tests', () => {
       const unimplementedEndpoints = [
         '/api/models',
         '/api/models/current',
-        '/api/evaluation/datasets',
         '/api/evaluation/run',
         '/api/auth/login',
         '/api/auth/profile',

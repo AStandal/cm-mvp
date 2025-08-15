@@ -12,3 +12,6 @@
 - This ensures code quality and prevents regressions in the codebase
 
 - When asked to review the current implementation of a task, use git status and git diff to view the current changes.
+
+- If the implementation of a new task introduces regression in the verification/testsuite the those regressions must be fixed. 
+- When implementing a new API, remember to update existing API tests to reflect the newly implemented API.
