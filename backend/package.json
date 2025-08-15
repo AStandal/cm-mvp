@@ -21,11 +21,18 @@
     "audit:fix": "npm audit fix",
     "audit:force": "npm audit fix --force",
     "security": "npm audit --audit-level moderate",
-    "verify": "npm run typecheck && npm run typecheck:tests && npm run build && npm run lint && npm run test:unit && npm run test:api && npm run security"
+    "verify": "npm run typecheck && npm run typecheck:tests && npm run build && npm run lint && npm run test:unit && npm run test:api && npm run security",
+    "eval:create-dataset": "tsx src/scripts/dataset-cli.ts create",
+    "eval:list-datasets": "tsx src/scripts/dataset-cli.ts list",
+    "eval:get-dataset": "tsx src/scripts/dataset-cli.ts get",
+    "eval:add-example": "tsx src/scripts/dataset-cli.ts add-example",
+    "eval:add-example-interactive": "tsx src/scripts/dataset-cli.ts add-example-interactive",
+    "eval:example-template": "tsx src/scripts/dataset-cli.ts example-template"
   },
   "dependencies": {
     "axios": "^1.11.0",
     "better-sqlite3": "^12.2.0",
+    "commander": "^14.0.0",
     "cors": "^2.8.5",
     "dotenv": "^17.2.0",
     "express": "^5.1.0",
@@ -38,6 +45,7 @@
     "@eslint/js": "^9.31.0",
     "@types/axios": "^0.9.36",
     "@types/better-sqlite3": "^7.6.13",
+    "@types/commander": "^2.12.0",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.3",
     "@types/node": "^24.0.15",

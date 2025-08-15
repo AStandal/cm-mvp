@@ -36,7 +36,7 @@
   - Add POST /api/evaluation/datasets/:id/examples endpoint for adding examples
   - _Requirements: 1.3_
 
-- [ ] 1.7 Create basic dataset management CLI script
+- [x] 1.7 Create basic dataset management CLI script
   - Add npm script for creating datasets from command line
   - Add script for adding manual examples to datasets
   - Add dataset listing and details display

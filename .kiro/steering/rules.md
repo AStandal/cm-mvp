@@ -15,3 +15,4 @@
 
 - If the implementation of a new task introduces regression in the verification/testsuite the those regressions must be fixed. 
 - When implementing a new API, remember to update existing API tests to reflect the newly implemented API.
+- If you create a new test during task development, then that test must pass test execution before you can finish the task.

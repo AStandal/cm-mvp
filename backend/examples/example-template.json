@@ -1,0 +1,24 @@
+{
+  "input": {
+    "prompt": "Generate a summary for this case",
+    "context": {
+      "caseType": "application",
+      "priority": "high"
+    }
+  },
+  "expectedOutput": {
+    "content": "This is the expected output content",
+    "quality": 8,
+    "criteria": {
+      "faithfulness": 9,
+      "completeness": 8,
+      "relevance": 8,
+      "clarity": 7
+    }
+  },
+  "metadata": {
+    "tags": ["test", "example"],
+    "difficulty": "medium",
+    "notes": "This is a template example"
+  }
+}
