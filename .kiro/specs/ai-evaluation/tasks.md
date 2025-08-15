@@ -3,7 +3,7 @@
 ## Phase 1: Basic Dataset Management (Testable E2E)
 **Goal**: Create and manage evaluation datasets with manual examples
 
-- [ ] 1.1 Create evaluation dataset database table
+- [x] 1.1 Create evaluation dataset database table
   - Add evaluation_datasets table with name, description, operation, metadata columns
   - Add foreign key constraints and basic indexes
   - _Requirements: 1.1, 1.2_
