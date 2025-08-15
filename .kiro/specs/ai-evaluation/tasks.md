@@ -54,41 +54,48 @@
 - [ ] 2.1 Create judge evaluations database table
   - Add judge_evaluations table with interaction_id, evaluation_model, scores, reasoning columns
   - Link to existing ai_interactions table via foreign key
+  - Add database schema migration and update DatabaseSchema class
   - _Requirements: 2.1, 2.2_
 
 - [ ] 2.2 Define judge evaluation TypeScript interfaces
   - Create JudgeEvaluationResult interface with scoring criteria
-  - Add evaluation input/output interfaces
+  - Add evaluation input/output interfaces in types/evaluation.ts
+  - Add Zod validation schemas for judge evaluation requests/responses
   - _Requirements: 2.1, 2.2_
 
 - [ ] 2.3 Create basic JudgeEvaluationService class
   - Implement JudgeEvaluationService constructor with OpenRouterClient dependency
   - Add evaluateOutput method for single evaluation
   - Create basic evaluation prompt template with 1-10 scoring
+  - Integrate with existing PromptTemplateService for consistency
   - _Requirements: 2.1, 2.2_
 
 - [ ] 2.4 Add multi-dimensional scoring to JudgeEvaluationService
   - Implement scoring for faithfulness, completeness, relevance, clarity
   - Add detailed reasoning capture for each score dimension
   - Create score aggregation and confidence calculation
+  - Use existing EvaluationCriteria interface from Phase 1
   - _Requirements: 2.2, 2.4_
 
 - [ ] 2.5 Create judge evaluation API endpoints
-  - Add POST /api/judge/evaluate endpoint for single evaluation
-  - Add GET /api/judge/models endpoint for available evaluation models
-  - Add input validation using Zod schemas
+  - Add POST /api/evaluation/judge/evaluate endpoint for single evaluation
+  - Add GET /api/evaluation/judge/models endpoint for available evaluation models
+  - Add input validation using existing Zod schema patterns
+  - Integrate with existing evaluation routes structure
   - _Requirements: 2.1_
 
 - [ ] 2.6 Create evaluation execution CLI script
-  - Add npm script for evaluating AI interactions using judge models
+  - Add judge-cli.ts script for evaluating AI interactions using judge models
+  - Add npm scripts: eval:judge-evaluate, eval:judge-models
   - Add result display and export to JSON format
   - Add configuration file support for evaluation parameters
   - _Requirements: 2.1_
 
-- [ ] 2.7 Write tests for Phase 2
+- [ ] 2.7 Write comprehensive tests for Phase 2
   - Test judge evaluation service with mock AI responses
   - Test API endpoints for evaluation execution
   - Create end-to-end test: CLI → Judge Evaluation → Results Storage
+  - Add integration tests with existing evaluation dataset functionality
   - _Requirements: 2.1, 2.2_
 
 **🎯 MILESTONE 2**: Can evaluate AI outputs using LLM judges and get scored results
@@ -97,38 +104,44 @@
 **Goal**: Automatically build evaluation datasets from captured AI interactions
 
 - [ ] 3.1 Implement dataset building from AI interactions
-  - Add buildDatasetFromInteractions method to EvaluationService
+  - Add buildDatasetFromInteractions method to existing EvaluationService
   - Create filtering logic for interaction eligibility (success rate, operation type)
   - Implement data transformation from AIInteraction to EvaluationExample
+  - Leverage existing ai_interactions table and data structures
   - _Requirements: 1.1, 1.5_
 
 - [ ] 3.2 Add dataset building CLI script
-  - Create npm script for building datasets from production AI interactions
+  - Extend existing dataset-cli.ts with build-from-interactions command
   - Add filtering options (date range, operation type, success rate)
   - Add progress monitoring and statistics display
+  - Integrate with existing CLI infrastructure and npm scripts
   - _Requirements: 1.1, 1.5_
 
 - [ ] 3.3 Create evaluation run tracking tables
   - Add evaluation_runs table with dataset_id, config, status, progress columns
   - Add evaluation_run_results table linking runs to examples and results
+  - Update DatabaseSchema class with new table definitions
   - _Requirements: 1.3, 2.6_
 
 - [ ] 3.4 Add batch evaluation to JudgeEvaluationService
   - Add batchEvaluate method for processing multiple outputs
   - Implement basic rate limiting and progress tracking
   - Add evaluation run management and result storage
+  - Build on existing JudgeEvaluationService from Phase 2
   - _Requirements: 2.6_
 
 - [ ] 3.5 Create evaluation run API endpoints
   - Add POST /api/evaluation/runs endpoint for starting evaluation runs
   - Add GET /api/evaluation/runs/:id endpoint for run status and progress
   - Add GET /api/evaluation/runs/:id/results endpoint for results
+  - Integrate with existing evaluation routes structure
   - _Requirements: 1.3, 2.5_
 
-- [ ] 3.6 Write tests for Phase 3
+- [ ] 3.6 Write comprehensive tests for Phase 3
   - Test dataset building from production AI interactions
   - Test batch evaluation runs with progress tracking
   - Create end-to-end test: Production Data → Dataset → Batch Evaluation → Results
+  - Build on existing test infrastructure and patterns
   - _Requirements: 1.5, 2.6_
 
 **🎯 MILESTONE 3**: Can automatically build datasets from production data and run batch evaluations
@@ -139,49 +152,57 @@
 - [ ] 4.1 Create A/B testing database tables
   - Add ab_tests table with name, description, operation, status, config columns
   - Add test_variants table with test_id, name, config, metrics columns
-  - Add foreign key relationships and status constraints
+  - Add ab_test_assignments table for tracking user/case assignments
+  - Update DatabaseSchema class with new table definitions and foreign key relationships
   - _Requirements: 3.1, 3.2_
 
 - [ ] 4.2 Define A/B testing TypeScript interfaces
-  - Create ABTest, TestVariant, and ABTestResults interfaces
+  - Create ABTest, TestVariant, and ABTestResults interfaces in types/evaluation.ts
   - Add statistical analysis result interfaces
+  - Add Zod validation schemas for A/B testing requests/responses
   - _Requirements: 3.1_
 
 - [ ] 4.3 Create basic ABTestingService class
   - Implement ABTestingService constructor with service dependencies
   - Add createABTest method for test configuration
   - Add startABTest and stopABTest methods
+  - Follow existing service patterns and error handling
   - _Requirements: 3.1_
 
 - [ ] 4.4 Implement variant assignment in ABTestingService
   - Add assignVariant method with proper randomization
   - Implement traffic split logic based on test configuration
   - Add variant assignment tracking and logging
+  - Integrate with existing audit trail system
   - _Requirements: 3.2_
 
 - [ ] 4.5 Add basic statistical analysis to ABTestingService
   - Implement analyzeTestResults method with basic statistics
   - Add confidence interval calculation
   - Create statistical significance testing (t-test)
+  - Build on existing evaluation criteria and scoring systems
   - _Requirements: 3.4_
 
 - [ ] 4.6 Create A/B testing API endpoints
-  - Add POST /api/abtests endpoint for test creation
-  - Add GET /api/abtests endpoint for listing tests
-  - Add POST /api/abtests/:id/start and /stop endpoints
-  - Add GET /api/abtests/:id/results endpoint for statistical analysis
+  - Add POST /api/evaluation/abtests endpoint for test creation
+  - Add GET /api/evaluation/abtests endpoint for listing tests
+  - Add POST /api/evaluation/abtests/:id/start and /stop endpoints
+  - Add GET /api/evaluation/abtests/:id/results endpoint for statistical analysis
+  - Integrate with existing evaluation routes structure
   - _Requirements: 3.1, 3.4_
 
 - [ ] 4.7 Create A/B testing CLI script
-  - Add npm script for A/B test creation and management
+  - Create abtest-cli.ts script for A/B test creation and management
+  - Add npm scripts: eval:abtest-create, eval:abtest-start, eval:abtest-results
   - Implement test status monitoring and results display
   - Add configuration file support for test parameters
   - _Requirements: 3.1_
 
-- [ ] 4.8 Write tests for Phase 4
+- [ ] 4.8 Write comprehensive tests for Phase 4
   - Test A/B test creation and variant assignment
   - Test statistical analysis accuracy with known datasets
   - Create end-to-end test: Test Creation → Variant Assignment → Statistical Analysis
+  - Build on existing test infrastructure and patterns
   - _Requirements: 3.1, 3.2, 3.4_
 
 **🎯 MILESTONE 4**: Can run A/B tests with statistical analysis and confidence intervals
@@ -193,41 +214,47 @@
   - Implement chain-of-thought reasoning in evaluation prompts
   - Add few-shot examples generation for consistency
   - Create evaluation consistency validation
+  - Integrate with existing PromptTemplateService for template management
   - _Requirements: 2.3_
 
 - [ ] 5.2 Add user feedback tracking
   - Create user_feedback table with interaction_id, user_id, rating, feedback columns
   - Add user feedback collection API endpoints
   - Integrate feedback data with evaluation analysis
+  - Update DatabaseSchema class with new table definition
   - _Requirements: 3.3_
 
 - [ ] 5.3 Implement gradual rollout capabilities
   - Add promoteWinningVariant method for gradual deployment
   - Implement rollback functionality for failed rollouts
   - Add rollout percentage tracking and management
+  - Build on existing A/B testing infrastructure from Phase 4
   - _Requirements: 3.5_
 
-- [ ] 5.4 Add comprehensive input validation
-  - Create Zod schemas for all evaluation request/response types
-  - Add validation middleware for evaluation endpoints
-  - Implement proper error handling and response formatting
+- [ ] 5.4 Enhance input validation and error handling
+  - Review and enhance existing Zod schemas for all evaluation types
+  - Add validation middleware for new evaluation endpoints
+  - Implement consistent error handling and response formatting
+  - Build on existing validation patterns from Phase 1
   - _Requirements: 1.3, 2.6, 3.3_
 
-- [ ] 5.5 Create comprehensive test suite
-  - Write unit tests for all services (EvaluationService, JudgeEvaluationService, ABTestingService)
-  - Add API integration tests for all endpoints
+- [ ] 5.5 Expand comprehensive test suite
+  - Add unit tests for new services (JudgeEvaluationService, ABTestingService)
+  - Add API integration tests for all new endpoints
   - Create performance tests for large-scale evaluation runs
+  - Build on existing test infrastructure and patterns
   - _Requirements: 1.1, 2.1, 3.1_
 
 - [ ] 5.6 Add advanced CLI features
-  - Add result export functionality (JSON, CSV formats)
+  - Add result export functionality (JSON, CSV formats) to existing CLI scripts
   - Implement configuration file templates and examples
   - Add progress monitoring and detailed status reporting
+  - Enhance existing dataset-cli.ts and new CLI scripts
   - _Requirements: 1.7, 2.1, 3.6_
 
 - [ ] 5.7 Create comprehensive documentation
   - Write API documentation for all evaluation endpoints
-  - Add CLI usage guides and examples
+  - Add CLI usage guides and examples building on existing CLI_USAGE.md
   - Create configuration reference and best practices
   - Add troubleshooting guides and operational procedures
   - _Requirements: 1.7, 2.1, 3.6_
