@@ -27,7 +27,12 @@
     "eval:get-dataset": "tsx src/scripts/dataset-cli.ts get",
     "eval:add-example": "tsx src/scripts/dataset-cli.ts add-example",
     "eval:add-example-interactive": "tsx src/scripts/dataset-cli.ts add-example-interactive",
-    "eval:example-template": "tsx src/scripts/dataset-cli.ts example-template"
+    "eval:example-template": "tsx src/scripts/dataset-cli.ts example-template",
+    "eval:judge-evaluate": "tsx src/scripts/judge-cli.ts evaluate",
+    "eval:judge-models": "tsx src/scripts/judge-cli.ts models",
+    "eval:judge-config-template": "tsx src/scripts/judge-cli.ts config-template",
+    "eval:judge-criteria-template": "tsx src/scripts/judge-cli.ts criteria-template",
+    "eval:judge-few-shot-template": "tsx src/scripts/judge-cli.ts few-shot-template"
   },
   "dependencies": {
     "axios": "^1.11.0",

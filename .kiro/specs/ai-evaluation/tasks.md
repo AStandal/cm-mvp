@@ -77,14 +77,14 @@
   - Use existing EvaluationCriteria interface from Phase 1
   - _Requirements: 2.2, 2.4_
 
-- [ ] 2.5 Create judge evaluation API endpoints
+- [x] 2.5 Create judge evaluation API endpoints
   - Add POST /api/evaluation/judge/evaluate endpoint for single evaluation
   - Add GET /api/evaluation/judge/models endpoint for available evaluation models
   - Add input validation using existing Zod schema patterns
   - Integrate with existing evaluation routes structure
   - _Requirements: 2.1_
 
-- [ ] 2.6 Create evaluation execution CLI script
+- [x] 2.6 Create evaluation execution CLI script
   - Add judge-cli.ts script for evaluating AI interactions using judge models
   - Add npm scripts: eval:judge-evaluate, eval:judge-models
   - Add result display and export to JSON format
