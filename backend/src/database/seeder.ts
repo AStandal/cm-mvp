@@ -1,4 +1,6 @@
 import { DatabaseConnection } from './connection.js';
+import { DatabaseSchema } from './schema.js';
+import { runInitialMigrations } from './migrations.js';
 import { CaseStatus, ProcessStep, ApplicationData } from '../types/database.js';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -13,6 +15,9 @@ export class DatabaseSeeder {
     console.log('Seeding database with sample data...');
 
     try {
+      // Check if database is initialized, if not initialize it
+      await this.ensureDatabaseInitialized();
+
       this.db.transaction(() => {
         this.seedCases();
         this.seedAISummaries();
@@ -25,6 +30,33 @@ export class DatabaseSeeder {
     } catch (error) {
       console.error('Database seeding failed:', error);
       throw error;
+    }
+  }
+
+  private async ensureDatabaseInitialized(): Promise<void> {
+    const requiredTables = ['cases', 'ai_summaries', 'case_notes', 'audit_trail', 'ai_interactions'];
+    const existingTables = this.getExistingTables();
+    const missingTables = requiredTables.filter(table => !existingTables.includes(table));
+
+    if (missingTables.length > 0) {
+      console.log(`🔧 Database not initialized. Missing tables: ${missingTables.join(', ')}`);
+      console.log('🚀 Initializing database...');
+      
+      // Initialize database schema and run migrations directly
+      const schema = new DatabaseSchema();
+      schema.initializeSchema();
+      
+      await runInitialMigrations();
+      
+      // Validate schema
+      const isValid = schema.validateSchema();
+      if (!isValid) {
+        throw new Error('Schema validation failed after initialization');
+      }
+      
+      console.log('✅ Database initialization completed');
+    } else {
+      console.log('✅ Database is already initialized');
     }
   }
 

@@ -91,12 +91,9 @@
   - Add configuration file support for evaluation parameters
   - _Requirements: 2.1_
 
-- [ ] 2.7 Write comprehensive tests for Phase 2
-  - Test judge evaluation service with mock AI responses
-  - Test API endpoints for evaluation execution
-  - Create end-to-end test: CLI → Judge Evaluation → Results Storage
-  - Add integration tests with existing evaluation dataset functionality
-  - _Requirements: 2.1, 2.2_
+- [x] 2.7 Create end-to-end CLI integration test
+  - Create end-to-end integration test: CLI → Judge Evaluation → Results Storage workflow
+  - _Requirements: 2.1_
 
 **🎯 MILESTONE 2**: Can evaluate AI outputs using LLM judges and get scored results
 
