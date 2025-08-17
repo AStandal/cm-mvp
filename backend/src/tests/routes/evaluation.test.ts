@@ -429,4 +429,243 @@ describe('Evaluation API Routes', () => {
       expect(response.body.error.code).toBe('DATASET_NOT_FOUND');
     });
   });
+
+  describe('GET /api/evaluation/judge/models', () => {
+    it('should return available evaluation models', async () => {
+      const response = await request(app)
+        .get('/api/evaluation/judge/models')
+        .expect(200);
+
+      expect(response.body.success).toBe(true);
+      expect(response.body.data.models).toBeDefined();
+      expect(Array.isArray(response.body.data.models)).toBe(true);
+      expect(response.body.data.total).toBeGreaterThan(0);
+      expect(response.body.timestamp).toBeDefined();
+
+      // Check that models have required properties
+      if (response.body.data.models.length > 0) {
+        const model = response.body.data.models[0];
+        expect(model.id).toBeDefined();
+        expect(model.name).toBeDefined();
+        expect(model.provider).toBeDefined();
+        expect(model.supportedCriteria).toBeDefined();
+        expect(Array.isArray(model.supportedCriteria)).toBe(true);
+      }
+    });
+
+    it('should include recommended models', async () => {
+      const response = await request(app)
+        .get('/api/evaluation/judge/models')
+        .expect(200);
+
+      const recommendedModels = response.body.data.models.filter((m: any) => m.recommended === true);
+      expect(recommendedModels.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe('POST /api/evaluation/judge/evaluate', () => {
+    let interactionId: string;
+
+    beforeEach(async () => {
+      // Create a test case first
+      const caseStmt = db.prepare(`
+        INSERT INTO cases (
+          id, application_data, status, current_step, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?)
+      `);
+      
+      const caseId = 'test-case-123';
+      caseStmt.run(
+        caseId,
+        JSON.stringify({
+          applicantName: 'Test User',
+          applicantEmail: 'test@example.com',
+          applicationType: 'standard',
+          submissionDate: new Date().toISOString(),
+          documents: [],
+          formData: {}
+        }),
+        'pending',
+        'received',
+        new Date().toISOString(),
+        new Date().toISOString()
+      );
+
+      // Create a test AI interaction to evaluate
+      const stmt = db.prepare(`
+        INSERT INTO ai_interactions (
+          id, case_id, operation, prompt, response, model, tokens_used, 
+          duration, success, timestamp, prompt_template, prompt_version
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `);
+      
+      interactionId = 'test-interaction-' + Date.now();
+      stmt.run(
+        interactionId,
+        caseId,
+        'generate_summary',
+        'Generate a summary for this case',
+        'This is a test summary response',
+        'gpt-4',
+        100,
+        2000,
+        1, // Convert boolean to integer
+        new Date().toISOString(),
+        'test-template',
+        '1.0'
+      );
+    });
+
+    it('should evaluate an AI output successfully', async () => {
+      const evaluateData = {
+        input: {
+          interactionId: interactionId,
+          evaluationModel: 'gpt-4',
+          criteria: ['faithfulness', 'completeness', 'relevance', 'clarity']
+        },
+        options: {
+          includeChainOfThought: true,
+          maxRetries: 2,
+          timeoutMs: 10000
+        }
+      };
+
+      const response = await request(app)
+        .post('/api/evaluation/judge/evaluate')
+        .send(evaluateData)
+        .expect(200);
+
+      expect(response.body.success).toBe(true);
+      expect(response.body.data.evaluation).toBeDefined();
+      expect(response.body.data.evaluation.id).toBeDefined();
+      expect(response.body.data.evaluation.interactionId).toBe(interactionId);
+      expect(response.body.data.evaluation.evaluationModel).toBe('gpt-4');
+      expect(response.body.data.evaluation.scores).toBeDefined();
+      expect(response.body.data.evaluation.reasoning).toBeDefined();
+      expect(response.body.data.evaluation.metadata).toBeDefined();
+      expect(response.body.message).toBe('AI output evaluated successfully');
+      expect(response.body.timestamp).toBeDefined();
+
+      // Check scores structure
+      const scores = response.body.data.evaluation.scores;
+      expect(scores.overall).toBeGreaterThanOrEqual(1);
+      expect(scores.overall).toBeLessThanOrEqual(10);
+      expect(scores.faithfulness).toBeGreaterThanOrEqual(1);
+      expect(scores.faithfulness).toBeLessThanOrEqual(10);
+      expect(scores.completeness).toBeGreaterThanOrEqual(1);
+      expect(scores.completeness).toBeLessThanOrEqual(10);
+      expect(scores.relevance).toBeGreaterThanOrEqual(1);
+      expect(scores.relevance).toBeLessThanOrEqual(10);
+      expect(scores.clarity).toBeGreaterThanOrEqual(1);
+      expect(scores.clarity).toBeLessThanOrEqual(10);
+
+      // Check reasoning structure
+      const reasoning = response.body.data.evaluation.reasoning;
+      expect(reasoning.overall).toBeDefined();
+      expect(reasoning.faithfulness).toBeDefined();
+      expect(reasoning.completeness).toBeDefined();
+      expect(reasoning.relevance).toBeDefined();
+      expect(reasoning.clarity).toBeDefined();
+
+      // Check metadata structure
+      const metadata = response.body.data.evaluation.metadata;
+      expect(metadata.evaluatedAt).toBeDefined();
+      expect(metadata.evaluationDuration).toBeGreaterThan(0);
+      expect(metadata.confidence).toBeGreaterThanOrEqual(0);
+      expect(metadata.confidence).toBeLessThanOrEqual(1);
+      expect(metadata.flags).toBeDefined();
+      expect(Array.isArray(metadata.flags)).toBe(true);
+    });
+
+    it('should handle evaluation with custom criteria', async () => {
+      const evaluateData = {
+        input: {
+          interactionId: interactionId,
+          evaluationModel: 'gpt-4',
+          criteria: ['faithfulness', 'completeness'],
+          customCriteria: {
+            'technical_accuracy': 'How technically accurate is the response?',
+            'user_friendliness': 'How user-friendly is the response?'
+          }
+        },
+        options: {
+          includeChainOfThought: false
+        }
+      };
+
+      const response = await request(app)
+        .post('/api/evaluation/judge/evaluate')
+        .send(evaluateData)
+        .expect(200);
+
+      expect(response.body.success).toBe(true);
+      expect(response.body.data.evaluation.scores).toBeDefined();
+      expect(response.body.data.evaluation.reasoning).toBeDefined();
+    });
+
+    it('should return 404 for non-existent interaction', async () => {
+      const evaluateData = {
+        input: {
+          interactionId: 'non-existent-interaction',
+          evaluationModel: 'gpt-4'
+        }
+      };
+
+      const response = await request(app)
+        .post('/api/evaluation/judge/evaluate')
+        .send(evaluateData)
+        .expect(404);
+
+      expect(response.body.error.code).toBe('EVALUATION_FAILED');
+      expect(response.body.error.message).toContain('not found');
+    });
+
+    it('should return validation error for invalid input', async () => {
+      const invalidData = {
+        input: {
+          interactionId: '', // Empty interaction ID
+          evaluationModel: '' // Empty model
+        }
+      };
+
+      const response = await request(app)
+        .post('/api/evaluation/judge/evaluate')
+        .send(invalidData)
+        .expect(400);
+
+      expect(response.body.error.code).toBe('VALIDATION_ERROR');
+      expect(response.body.error.message).toBe('Invalid input data');
+    });
+
+    it('should handle evaluation with few-shot examples', async () => {
+      const evaluateData = {
+        input: {
+          interactionId: interactionId,
+          evaluationModel: 'gpt-4',
+          fewShotExamples: [
+            {
+              input: 'Example input 1',
+              output: 'Example output 1',
+              score: 8,
+              reasoning: 'This is a good example'
+            },
+            {
+              input: 'Example input 2',
+              output: 'Example output 2',
+              score: 6,
+              reasoning: 'This is an average example'
+            }
+          ]
+        }
+      };
+
+      const response = await request(app)
+        .post('/api/evaluation/judge/evaluate')
+        .send(evaluateData)
+        .expect(200);
+
+      expect(response.body.success).toBe(true);
+      expect(response.body.data.evaluation).toBeDefined();
+    });
+  });
 });

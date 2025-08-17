@@ -510,7 +510,7 @@ First, let me carefully analyze the AI response step by step:
         }));
 
       return evaluationModels;
-    } catch (error) {
+    } catch {
       // Return default models if API call fails
       return this.getDefaultEvaluationModels();
     }

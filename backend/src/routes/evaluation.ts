@@ -5,11 +5,16 @@ import {
   CreateDatasetRequestSchema, 
   AddExampleRequestSchema,
   CreateDatasetRequest,
-  AddExampleRequest 
+  AddExampleRequest,
+  EvaluateOutputRequestSchema,
+  EvaluateOutputRequest
 } from '../types/evaluation.js';
 import { randomUUID } from 'crypto';
 import { EvaluationService } from '../services/EvaluationService.js';
 import { DataService } from '../services/DataService.js';
+import { JudgeEvaluationService } from '../services/JudgeEvaluationService.js';
+import { OpenRouterClient } from '../services/OpenRouterClient.js';
+import { PromptTemplateService } from '../services/PromptTemplateService.js';
 
 const router = Router();
 
@@ -17,6 +22,21 @@ const router = Router();
 const getEvaluationService = (): EvaluationService => {
   const dataService = new DataService();
   return new EvaluationService(dataService);
+};
+
+const getJudgeEvaluationService = (): JudgeEvaluationService => {
+  // Create OpenRouter configuration
+  const openRouterConfig = {
+    modelId: process.env.DEFAULT_MODEL || 'openai/gpt-oss-20b:free',
+    provider: 'openrouter' as const,
+    apiKey: process.env.OPENROUTER_API_KEY || 'test-key',
+    baseUrl: process.env.OPENROUTER_BASE_URL || 'https://openrouter.ai/api/v1',
+    timeoutMs: 30000
+  };
+  
+  const openRouterClient = new OpenRouterClient(openRouterConfig, process.env.NODE_ENV === 'test');
+  const promptTemplateService = new PromptTemplateService();
+  return new JudgeEvaluationService(openRouterClient, promptTemplateService);
 };
 
 // Middleware for input validation
@@ -305,6 +325,90 @@ router.get('/datasets/:id/examples', validateDatasetId, asyncHandler(async (req:
       error: {
         code: 'EXAMPLES_RETRIEVAL_FAILED',
         message: error instanceof Error ? error.message : 'Failed to retrieve dataset examples',
+        details: process.env.NODE_ENV === 'development' ? error : undefined
+      },
+      timestamp: new Date().toISOString(),
+      requestId: randomUUID()
+    };
+
+    res.status(500).json(errorResponse);
+  }
+}));
+
+/**
+ * POST /api/evaluation/judge/evaluate
+ * Evaluate a single AI output using LLM-as-a-Judge
+ * Requirements: 2.1
+ */
+router.post('/judge/evaluate', validateInput(EvaluateOutputRequestSchema), asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  const evaluateRequest = req.body as EvaluateOutputRequest;
+
+  try {
+    const service = getJudgeEvaluationService();
+    const result = await service.evaluateOutput(evaluateRequest);
+
+    // Return the evaluation result
+    res.status(200).json({
+      success: true,
+      data: {
+        evaluation: result
+      },
+      message: 'AI output evaluated successfully',
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (error) {
+    const errorResponse: ErrorResponse = {
+      error: {
+        code: 'EVALUATION_FAILED',
+        message: error instanceof Error ? error.message : 'Failed to evaluate AI output',
+        details: process.env.NODE_ENV === 'development' ? error : undefined
+      },
+      timestamp: new Date().toISOString(),
+      requestId: randomUUID()
+    };
+
+    // Determine appropriate status code based on error type
+    let statusCode = 500;
+    if (error instanceof Error) {
+      if (error.message.includes('not found')) {
+        statusCode = 404;
+      } else if (error.message.includes('validation') || error.message.includes('required')) {
+        statusCode = 400;
+      } else if (error.message.includes('timeout') || error.message.includes('retry')) {
+        statusCode = 408;
+      }
+    }
+
+    res.status(statusCode).json(errorResponse);
+  }
+}));
+
+/**
+ * GET /api/evaluation/judge/models
+ * Get available evaluation models
+ * Requirements: 2.1
+ */
+router.get('/judge/models', asyncHandler(async (_req: Request, res: Response): Promise<void> => {
+  try {
+    const service = getJudgeEvaluationService();
+    const models = await service.getAvailableEvaluationModels();
+
+    // Return the available models
+    res.status(200).json({
+      success: true,
+      data: {
+        models,
+        total: models.length
+      },
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (error) {
+    const errorResponse: ErrorResponse = {
+      error: {
+        code: 'MODELS_RETRIEVAL_FAILED',
+        message: error instanceof Error ? error.message : 'Failed to retrieve evaluation models',
         details: process.env.NODE_ENV === 'development' ? error : undefined
       },
       timestamp: new Date().toISOString(),

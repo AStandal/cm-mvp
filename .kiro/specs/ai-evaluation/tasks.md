@@ -70,7 +70,7 @@
   - Integrate with existing PromptTemplateService for consistency
   - _Requirements: 2.1, 2.2_
 
-- [ ] 2.4 Add multi-dimensional scoring to JudgeEvaluationService
+- [x] 2.4 Add multi-dimensional scoring to JudgeEvaluationService
   - Implement scoring for faithfulness, completeness, relevance, clarity
   - Add detailed reasoning capture for each score dimension
   - Create score aggregation and confidence calculation
