@@ -68,7 +68,7 @@ export interface AISummary {
 export interface AIInteraction {
   id: string;
   caseId: string;
-  operation: 'generate_summary' | 'generate_recommendation' | 'analyze_application' | 'generate_final_summary' | 'validate_completeness' | 'detect_missing_fields';
+  operation: AIOperation;
   prompt: string;
   response: string;
   model: string;
@@ -177,6 +177,12 @@ export interface CaseService {
   getCasesByStatus(status: CaseStatus): Promise<Case[]>;
 }
 
+export interface DocumentProcessor {
+  extractTextFromPDF(filePath: string): Promise<string>;
+  processFolder(folderPath: string): Promise<ProcessingResult[]>;
+  validateDocument(filePath: string): Promise<ValidationResult>;
+}
+
 export interface AIService {
   generateOverallSummary(caseData: Case): Promise<AISummary>;
   generateStepRecommendation(caseData: Case, step: ProcessStep): Promise<AIRecommendation>;
@@ -184,6 +190,8 @@ export interface AIService {
   generateFinalSummary(caseData: Case): Promise<FinalSummary>;
   validateCaseCompleteness(caseData: Case): Promise<CompletenessValidation>;
   detectMissingFields(applicationData: ApplicationData): Promise<MissingFieldsAnalysis>;
+  extractZoningRequirements(documentBuffer: Buffer, documentMetadata: DocumentMetadata): Promise<ZoningPlan>;
+  batchProcessZoningDocuments(folderPath: string): Promise<BatchProcessingResult>;
 }
 
 export interface DataService {
@@ -193,10 +201,120 @@ export interface DataService {
   logActivity(activity: ActivityLog): Promise<void>;
   logAIInteraction(interaction: AIInteraction): Promise<void>;
   getAIInteractionHistory(caseId: string): Promise<AIInteraction[]>;
+  saveZoningPlan(plan: ZoningPlan): Promise<void>;
+  getZoningPlan(planId: string): Promise<ZoningPlan | null>;
+  getZoningRequirements(planId: string): Promise<ZoningRequirement[]>;
+  searchZoningRequirements(criteria: SearchCriteria): Promise<ZoningRequirement[]>;
+  updateZoningRequirement(requirementId: string, updates: Partial<ZoningRequirement>): Promise<void>;
+}
+
+// Zoning Requirements Types
+export interface ZoningRequirement {
+  id: string;
+  planId: string;
+  category: string;
+  subcategory?: string;
+  requirement: string;
+  description: string;
+  criteria: RequirementCriteria[];
+  references: string[];
+  priority: 'required' | 'recommended' | 'optional';
+  applicableZones: string[];
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface ZoningPlan {
+  id: string;
+  name: string;
+  documentPath: string;
+  documentHash: string;
+  jurisdiction: string;
+  effectiveDate: Date;
+  version: string;
+  requirements: ZoningRequirement[];
+  extractionMetadata: ExtractionMetadata;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface RequirementCriteria {
+  id: string;
+  type: 'numeric' | 'boolean' | 'text' | 'selection';
+  name: string;
+  description: string;
+  value?: string | number | boolean;
+  unit?: string;
+  validValues?: string[];
+  minValue?: number;
+  maxValue?: number;
+}
+
+export interface ExtractionMetadata {
+  extractedAt: Date;
+  aiModel: string;
+  promptTemplate: string;
+  promptVersion: string;
+  confidence: number;
+  tokensUsed: number;
+  processingDuration: number;
+  documentPages: number;
+  extractedRequirementsCount: number;
+}
+
+export interface DocumentMetadata {
+  fileName: string;
+  filePath: string;
+  fileSize: number;
+  pageCount: number;
+  documentHash: string;
+}
+
+export interface ProcessingResult {
+  documentPath: string;
+  success: boolean;
+  zoningPlan?: ZoningPlan;
+  error?: string;
+  processingTime: number;
+}
+
+export interface BatchProcessingResult {
+  totalDocuments: number;
+  successfulExtractions: number;
+  failedExtractions: number;
+  results: ProcessingResult[];
+  totalProcessingTime: number;
+}
+
+export interface ValidationResult {
+  isValid: boolean;
+  errors: string[];
+  warnings: string[];
+}
+
+export interface SearchCriteria {
+  planId?: string;
+  category?: string;
+  priority?: 'required' | 'recommended' | 'optional';
+  jurisdiction?: string;
+  applicableZones?: string[];
+  textSearch?: string;
+}
+
+// Zoning-specific error codes
+export enum ZoningErrorCodes {
+  INVALID_PDF = 'INVALID_PDF',
+  TEXT_EXTRACTION_FAILED = 'TEXT_EXTRACTION_FAILED',
+  LLM_PROCESSING_FAILED = 'LLM_PROCESSING_FAILED',
+  INVALID_RESPONSE_FORMAT = 'INVALID_RESPONSE_FORMAT',
+  DATABASE_SAVE_FAILED = 'DATABASE_SAVE_FAILED',
+  DUPLICATE_DOCUMENT = 'DUPLICATE_DOCUMENT',
+  ZONING_PLAN_NOT_FOUND = 'ZONING_PLAN_NOT_FOUND',
+  BATCH_PROCESSING_FAILED = 'BATCH_PROCESSING_FAILED'
 }
 
 // AI Evaluation Framework Types
-export type AIOperation = 'generate_summary' | 'generate_recommendation' | 'analyze_application' | 'generate_final_summary' | 'validate_completeness' | 'detect_missing_fields';
+export type AIOperation = 'generate_summary' | 'generate_recommendation' | 'analyze_application' | 'generate_final_summary' | 'validate_completeness' | 'detect_missing_fields' | 'extract_zoning_requirements' | 'batch_process_zoning';
 
 export type DifficultyLevel = 'easy' | 'medium' | 'hard';
 export type DatasetSourceType = 'manual' | 'captured_interactions' | 'synthetic';

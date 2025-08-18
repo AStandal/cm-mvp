@@ -9,7 +9,9 @@ export const AIOperationSchema = z.enum([
   'analyze_application',
   'generate_final_summary',
   'validate_completeness',
-  'detect_missing_fields'
+  'detect_missing_fields',
+  'extract_zoning_requirements',
+  'batch_process_zoning'
 ]);
 
 export const DifficultyLevelSchema = z.enum(['easy', 'medium', 'hard']);

@@ -3,16 +3,19 @@ import { DataService } from '../services/DataService.js';
 import { AIService } from '../services/AIService.js';
 import { OpenRouterClient } from '../services/OpenRouterClient.js';
 import { PromptTemplateService } from '../services/PromptTemplateService.js';
+import { DocumentProcessor } from '../services/DocumentProcessor.js';
 
 export interface ServiceContainer {
   caseService: CaseService;
   dataService: DataService;
   aiService: AIService;
+  documentProcessor: DocumentProcessor;
 }
 
 export function createServices(): ServiceContainer {
   // Initialize services
   const dataService = new DataService();
+  const documentProcessor = new DocumentProcessor();
 
   // Create OpenRouter configuration
   const openRouterConfig = {
@@ -31,7 +34,8 @@ export function createServices(): ServiceContainer {
   return {
     caseService,
     dataService,
-    aiService
+    aiService,
+    documentProcessor
   };
 }
 

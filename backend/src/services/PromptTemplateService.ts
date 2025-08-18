@@ -70,6 +70,33 @@ const MissingFieldsSchema = z.object({
   estimatedCompletionTime: z.string().min(1, 'Completion time estimate is required')
 });
 
+const ZoningRequirementsSchema = z.object({
+  name: z.string().min(1, 'Plan name is required'),
+  jurisdiction: z.string().min(1, 'Jurisdiction is required'),
+  effectiveDate: z.string().min(1, 'Effective date is required'),
+  version: z.string().min(1, 'Version is required'),
+  requirements: z.array(z.object({
+    category: z.string().min(1, 'Category is required'),
+    subcategory: z.string().optional(),
+    requirement: z.string().min(1, 'Requirement text is required'),
+    description: z.string().min(1, 'Description is required'),
+    criteria: z.array(z.object({
+      type: z.enum(['numeric', 'boolean', 'text', 'selection']),
+      name: z.string().min(1, 'Criteria name is required'),
+      description: z.string().min(1, 'Criteria description is required'),
+      value: z.union([z.string(), z.number(), z.boolean()]).optional(),
+      unit: z.string().optional(),
+      validValues: z.array(z.string()).optional(),
+      minValue: z.number().optional(),
+      maxValue: z.number().optional()
+    })),
+    references: z.array(z.string()),
+    priority: z.enum(['required', 'recommended', 'optional']),
+    applicableZones: z.array(z.string()).min(1, 'At least one applicable zone is required')
+  })).min(1, 'At least one requirement is required'),
+  confidence: z.number().min(0).max(1, 'Confidence must be between 0 and 1')
+});
+
 export class PromptTemplateService {
   private templates: TemplateRegistry = new Map();
 
@@ -342,6 +369,74 @@ Format as JSON:
         temperature: 0.3
       },
       schema: MissingFieldsSchema,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    });
+
+    // Zoning Requirements Extraction Template
+    this.registerTemplate({
+      id: 'zoning_requirements_extraction_v1',
+      name: 'Zoning Requirements Extraction',
+      version: '1.0',
+      description: 'Extract structured zoning requirements from PDF documents',
+      operation: 'extract_zoning_requirements',
+      template: `Please analyze the provided PDF document containing zoning plan requirements and extract structured information.
+
+Document Information:
+- File Name: {{fileName}}
+- File Size: {{fileSize}} bytes
+- Document Hash: {{documentHash}}
+- Extraction Date: {{extractionDate}}
+
+Instructions:
+1. Identify the zoning plan name, jurisdiction, effective date, and version
+2. Extract all zoning requirements organized by category
+3. For each requirement, identify:
+   - Category and subcategory (if applicable)
+   - Requirement text and detailed description
+   - Specific criteria with types (numeric, boolean, text, selection)
+   - References to sections or regulations
+   - Priority level (required, recommended, optional)
+   - Applicable zoning districts/zones
+4. Provide confidence level in the extraction accuracy
+
+Format your response as JSON with the following structure:
+{
+  "name": "Zoning Plan Name",
+  "jurisdiction": "City/County Name",
+  "effectiveDate": "YYYY-MM-DD",
+  "version": "1.0",
+  "requirements": [
+    {
+      "category": "Building Height",
+      "subcategory": "Residential",
+      "requirement": "Maximum building height shall not exceed specified limits",
+      "description": "Detailed description of the height requirement including measurement methods",
+      "criteria": [
+        {
+          "type": "numeric",
+          "name": "Maximum Height",
+          "description": "Maximum allowed building height",
+          "value": 35,
+          "unit": "feet",
+          "minValue": 0,
+          "maxValue": 35
+        }
+      ],
+      "references": ["Section 4.2.1", "Table 4-1"],
+      "priority": "required",
+      "applicableZones": ["R-1", "R-2"]
+    }
+  ],
+  "confidence": 0.85
+}
+
+Important: Ensure all numeric values are properly typed as numbers, not strings. Include units where applicable.`,
+      parameters: {
+        max_tokens: 4000,
+        temperature: 0.2
+      },
+      schema: ZoningRequirementsSchema,
       createdAt: new Date(),
       updatedAt: new Date()
     });

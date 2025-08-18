@@ -22,6 +22,8 @@ export class DatabaseSchema {
                 this.createEvaluationDatasetsTable();
                 this.createEvaluationExamplesTable();
                 this.createJudgeEvaluationsTable();
+                this.createZoningPlansTable();
+                this.createZoningRequirementsTable();
 
                 // Create indexes within the same transaction to ensure tables exist
                 this.createIndexesInTransaction();
@@ -29,7 +31,7 @@ export class DatabaseSchema {
 
             // Verify all tables were created
             const tables = this.listTables();
-            const requiredTables = ['cases', 'ai_summaries', 'case_notes', 'audit_trail', 'ai_interactions', 'evaluation_datasets', 'evaluation_examples', 'judge_evaluations'];
+            const requiredTables = ['cases', 'ai_summaries', 'case_notes', 'audit_trail', 'ai_interactions', 'evaluation_datasets', 'evaluation_examples', 'judge_evaluations', 'zoning_plans', 'zoning_requirements'];
             const missingTables = requiredTables.filter(table => !tables.includes(table));
 
             if (missingTables.length > 0) {
@@ -114,7 +116,7 @@ export class DatabaseSchema {
       CREATE TABLE IF NOT EXISTS ai_interactions (
         id TEXT PRIMARY KEY,
         case_id TEXT NOT NULL,
-        operation TEXT NOT NULL CHECK (operation IN ('generate_summary', 'generate_recommendation', 'analyze_application', 'generate_final_summary', 'validate_completeness', 'detect_missing_fields')),
+        operation TEXT NOT NULL CHECK (operation IN ('generate_summary', 'generate_recommendation', 'analyze_application', 'generate_final_summary', 'validate_completeness', 'detect_missing_fields', 'extract_zoning_requirements', 'batch_process_zoning')),
         prompt TEXT NOT NULL,
         response TEXT NOT NULL,
         model TEXT NOT NULL,
@@ -184,6 +186,47 @@ export class DatabaseSchema {
         console.log('Created judge_evaluations table');
     }
 
+    private createZoningPlansTable(): void {
+        const sql = `
+      CREATE TABLE IF NOT EXISTS zoning_plans (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        document_path TEXT NOT NULL,
+        document_hash TEXT NOT NULL UNIQUE,
+        jurisdiction TEXT NOT NULL,
+        effective_date DATETIME NOT NULL,
+        version TEXT NOT NULL,
+        extraction_metadata TEXT NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      );
+    `;
+        this.db.exec(sql);
+        console.log('Created zoning_plans table');
+    }
+
+    private createZoningRequirementsTable(): void {
+        const sql = `
+      CREATE TABLE IF NOT EXISTS zoning_requirements (
+        id TEXT PRIMARY KEY,
+        plan_id TEXT NOT NULL,
+        category TEXT NOT NULL,
+        subcategory TEXT,
+        requirement TEXT NOT NULL,
+        description TEXT NOT NULL,
+        criteria TEXT NOT NULL,
+        reference_docs TEXT NOT NULL,
+        priority TEXT NOT NULL CHECK (priority IN ('required', 'recommended', 'optional')),
+        applicable_zones TEXT NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (plan_id) REFERENCES zoning_plans(id) ON DELETE CASCADE
+      );
+    `;
+        this.db.exec(sql);
+        console.log('Created zoning_requirements table');
+    }
+
     private createIndexesInTransaction(): void {
         const indexes = [
             'CREATE INDEX IF NOT EXISTS idx_cases_status ON cases(status);',
@@ -205,7 +248,13 @@ export class DatabaseSchema {
             'CREATE INDEX IF NOT EXISTS idx_evaluation_examples_dataset_id ON evaluation_examples(dataset_id);',
             'CREATE INDEX IF NOT EXISTS idx_judge_evaluations_interaction_id ON judge_evaluations(interaction_id);',
             'CREATE INDEX IF NOT EXISTS idx_judge_evaluations_evaluation_model ON judge_evaluations(evaluation_model);',
-            'CREATE INDEX IF NOT EXISTS idx_judge_evaluations_created_at ON judge_evaluations(created_at);'
+            'CREATE INDEX IF NOT EXISTS idx_judge_evaluations_created_at ON judge_evaluations(created_at);',
+            'CREATE INDEX IF NOT EXISTS idx_zoning_plans_jurisdiction ON zoning_plans(jurisdiction);',
+            'CREATE INDEX IF NOT EXISTS idx_zoning_plans_effective_date ON zoning_plans(effective_date);',
+            'CREATE INDEX IF NOT EXISTS idx_zoning_plans_document_hash ON zoning_plans(document_hash);',
+            'CREATE INDEX IF NOT EXISTS idx_zoning_requirements_plan_id ON zoning_requirements(plan_id);',
+            'CREATE INDEX IF NOT EXISTS idx_zoning_requirements_category ON zoning_requirements(category);',
+            'CREATE INDEX IF NOT EXISTS idx_zoning_requirements_priority ON zoning_requirements(priority);'
         ];
 
         indexes.forEach(indexSql => {
@@ -229,7 +278,7 @@ export class DatabaseSchema {
         try {
             // Use a transaction to ensure atomicity
             this.db.transaction(() => {
-                const tables = ['judge_evaluations', 'evaluation_examples', 'evaluation_datasets', 'ai_interactions', 'audit_trail', 'case_notes', 'ai_summaries', 'cases'];
+                const tables = ['judge_evaluations', 'evaluation_examples', 'evaluation_datasets', 'zoning_requirements', 'zoning_plans', 'ai_interactions', 'audit_trail', 'case_notes', 'ai_summaries', 'cases'];
                 tables.forEach(table => {
                     this.db.exec(`DROP TABLE IF EXISTS ${table};`);
                 });
@@ -259,7 +308,7 @@ export class DatabaseSchema {
 
     public validateSchema(): boolean {
         try {
-            const expectedTables = ['cases', 'ai_summaries', 'case_notes', 'audit_trail', 'ai_interactions', 'evaluation_datasets', 'evaluation_examples', 'judge_evaluations'];
+            const expectedTables = ['cases', 'ai_summaries', 'case_notes', 'audit_trail', 'ai_interactions', 'evaluation_datasets', 'evaluation_examples', 'judge_evaluations', 'zoning_plans', 'zoning_requirements'];
             const actualTables = this.listTables();
 
             // Check if all expected tables exist

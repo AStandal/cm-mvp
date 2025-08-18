@@ -94,11 +94,13 @@ app.get('/version', (_req: Request, res: Response) => {
 import casesRouter from './routes/cases.js';
 import aiRouter from './routes/ai.js';
 import evaluationRouter from './routes/evaluation.js';
+import zoningRouter from './routes/zoning.js';
 
 // API routes
 app.use('/api/cases', casesRouter);
 app.use('/api/ai', aiRouter);
 app.use('/api/evaluation', evaluationRouter);
+app.use('/api/zoning', zoningRouter);
 
 // Fallback for unimplemented API routes
 app.use('/api', (_req: Request, res: Response) => {

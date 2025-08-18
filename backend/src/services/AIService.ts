@@ -12,7 +12,10 @@ import {
   CompletenessValidation,
   MissingFieldsAnalysis,
   ProcessStep,
-  AIInteraction
+  AIInteraction,
+  ZoningPlan,
+  DocumentMetadata,
+  BatchProcessingResult
 } from '../types/index.js';
 
 export class AIService {
@@ -832,4 +835,248 @@ export class AIService {
       // Don't throw here to avoid breaking the main operation
     }
   }
+
+  /**
+   * Extract zoning requirements from a PDF document
+   */
+  async extractZoningRequirements(documentText: string, documentMetadata: DocumentMetadata): Promise<ZoningPlan> {
+    const startTime = Date.now();
+    const interactionId = randomUUID();
+    const caseId = 'zoning-' + randomUUID(); // Temporary ID for logging
+    const templateId = 'zoning_requirements_extraction_v1';
+
+    try {
+      // For now, create a simple prompt with the document text
+      const prompt = `Extract zoning requirements from the following document text:\n\n${documentText.substring(0, 8000)}\n\nPlease extract structured zoning requirements in JSON format.`;
+      
+      // Use basic parameters for now
+      const parameters = {
+        temperature: 0.3,
+        max_tokens: 4000
+      };
+
+      // Make request to LLM
+      const response = await this.openRouterClient.makeRequest(prompt, parameters);
+
+      // For now, create a simple zoning plan structure
+      // TODO: Implement proper LLM response parsing and validation
+      const zoningPlan: ZoningPlan = {
+        id: randomUUID(),
+        name: documentMetadata.fileName.replace('.pdf', ''),
+        documentPath: documentMetadata.filePath,
+        documentHash: documentMetadata.documentHash,
+        jurisdiction: 'Unknown', // Would be extracted from LLM response
+        effectiveDate: new Date(),
+        version: '1.0',
+        requirements: [], // Would be populated from LLM response
+        extractionMetadata: {
+          extractedAt: new Date(),
+          aiModel: response.model,
+          promptTemplate: templateId,
+          promptVersion: '1.0',
+          confidence: 0.8,
+          tokensUsed: response.tokensUsed.input + response.tokensUsed.output,
+          processingDuration: Date.now() - startTime,
+          documentPages: documentMetadata.pageCount,
+          extractedRequirementsCount: 0
+        },
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+
+      // Log successful AI interaction
+      await this.logAIInteraction({
+        id: interactionId,
+        caseId,
+        operation: 'extract_zoning_requirements',
+        prompt,
+        response: response.content,
+        model: response.model,
+        tokensUsed: response.tokensUsed.input + response.tokensUsed.output,
+        duration: Date.now() - startTime,
+        success: true,
+        timestamp: new Date(),
+        promptTemplate: templateId,
+        promptVersion: '1.0'
+      });
+
+      return zoningPlan;
+    } catch (error) {
+      // Log failed AI interaction
+      await this.logAIInteraction({
+        id: interactionId,
+        caseId,
+        operation: 'extract_zoning_requirements',
+        prompt: `Extract zoning requirements from document: ${documentMetadata.fileName}`,
+        response: '',
+        model: 'unknown',
+        tokensUsed: 0,
+        duration: Date.now() - startTime,
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+        timestamp: new Date(),
+        promptTemplate: templateId,
+        promptVersion: '1.0'
+      });
+
+      throw new Error(`Failed to extract zoning requirements: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  /**
+   * Process multiple zoning documents from a folder
+   */
+  async batchProcessZoningDocuments(folderPath: string): Promise<BatchProcessingResult> {
+    const startTime = Date.now();
+    const interactionId = randomUUID();
+    const caseId = 'batch-zoning-' + randomUUID();
+
+    try {
+      // Import DocumentProcessor here to avoid circular dependencies
+      const { DocumentProcessor } = await import('./DocumentProcessor.js');
+      const documentProcessor = new DocumentProcessor();
+
+      // Get list of documents to process
+      const processingResults = await documentProcessor.processFolder(folderPath);
+      const batchResult: BatchProcessingResult = {
+        totalDocuments: processingResults.length,
+        successfulExtractions: 0,
+        failedExtractions: 0,
+        results: [],
+        totalProcessingTime: 0
+      };
+
+      // Process each valid document
+      for (const result of processingResults) {
+        if (result.success) {
+          try {
+            // Get document metadata and extract text
+            const documentText = await documentProcessor.extractTextFromPDF(result.documentPath);
+            const metadata = await documentProcessor.createDocumentMetadata(result.documentPath, documentText);
+
+            // Extract zoning requirements
+            const zoningPlan = await this.extractZoningRequirements(documentText, metadata);
+            
+            batchResult.results.push({
+              documentPath: result.documentPath,
+              success: true,
+              zoningPlan,
+              processingTime: result.processingTime
+            });
+            batchResult.successfulExtractions++;
+          } catch (error) {
+            batchResult.results.push({
+              documentPath: result.documentPath,
+              success: false,
+              error: error instanceof Error ? error.message : 'Unknown error',
+              processingTime: result.processingTime
+            });
+            batchResult.failedExtractions++;
+          }
+        } else {
+          batchResult.results.push(result);
+          batchResult.failedExtractions++;
+        }
+      }
+
+      batchResult.totalProcessingTime = Date.now() - startTime;
+
+      // Log successful batch processing
+      await this.logAIInteraction({
+        id: interactionId,
+        caseId,
+        operation: 'batch_process_zoning',
+        prompt: `Batch process zoning documents from: ${folderPath}`,
+        response: `Processed ${batchResult.totalDocuments} documents. Success: ${batchResult.successfulExtractions}, Failed: ${batchResult.failedExtractions}`,
+        model: 'batch-processor',
+        tokensUsed: 0,
+        duration: batchResult.totalProcessingTime,
+        success: true,
+        timestamp: new Date(),
+        promptTemplate: 'batch_processing',
+        promptVersion: '1.0'
+      });
+
+      return batchResult;
+    } catch (error) {
+      // Log failed batch processing
+      await this.logAIInteraction({
+        id: interactionId,
+        caseId,
+        operation: 'batch_process_zoning',
+        prompt: `Batch process zoning documents from: ${folderPath}`,
+        response: '',
+        model: 'batch-processor',
+        tokensUsed: 0,
+        duration: Date.now() - startTime,
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+        timestamp: new Date(),
+        promptTemplate: 'batch_processing',
+        promptVersion: '1.0'
+      });
+
+      throw new Error(`Failed to batch process zoning documents: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  // TODO: Implement these methods when completing the zoning requirements extraction feature
+  /*
+  private buildZoningExtractionData(documentMetadata: DocumentMetadata): Record<string, any> {
+    return {
+      fileName: documentMetadata.fileName,
+      fileSize: documentMetadata.fileSize,
+      documentHash: documentMetadata.documentHash,
+      extractionDate: new Date().toISOString()
+    };
+  }
+
+  private createZoningPlan(data: any, documentMetadata: DocumentMetadata, response: any): ZoningPlan {
+    const now = new Date();
+    const planId = randomUUID();
+
+    // Create requirements with proper IDs
+    const requirements: ZoningRequirement[] = data.requirements.map((req: any) => ({
+      id: randomUUID(),
+      planId,
+      category: req.category,
+      subcategory: req.subcategory,
+      requirement: req.requirement,
+      description: req.description,
+      criteria: req.criteria.map((criterion: any) => ({
+        id: randomUUID(),
+        ...criterion
+      })),
+      references: req.references,
+      priority: req.priority,
+      applicableZones: req.applicableZones,
+      createdAt: now,
+      updatedAt: now
+    }));
+
+    return {
+      id: planId,
+      name: data.name,
+      documentPath: documentMetadata.filePath,
+      documentHash: documentMetadata.documentHash,
+      jurisdiction: data.jurisdiction,
+      effectiveDate: new Date(data.effectiveDate),
+      version: data.version,
+      requirements,
+      extractionMetadata: {
+        extractedAt: now,
+        aiModel: response.model,
+        promptTemplate: 'zoning_requirements_extraction_v1',
+        promptVersion: '1.0',
+        confidence: data.confidence,
+        tokensUsed: response.tokensUsed.input + response.tokensUsed.output,
+        processingDuration: 0, // Will be set by caller
+        documentPages: documentMetadata.pageCount,
+        extractedRequirementsCount: requirements.length
+      },
+      createdAt: now,
+      updatedAt: now
+    };
+  }
+  */
 }

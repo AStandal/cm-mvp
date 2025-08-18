@@ -453,8 +453,8 @@ describe('PromptTemplateService', () => {
     it('should initialize with default templates', () => {
       const templates = service.listTemplates();
       
-      // Should have all 6 default templates
-      expect(templates.length).toBe(6);
+      // Should have all 7 default templates (including zoning template)
+      expect(templates.length).toBe(7);
       
       const templateNames = templates.map(t => t.name);
       expect(templateNames).toContain('Overall Case Summary');

@@ -121,6 +121,25 @@ export class OpenRouterClient {
   }
 
   /**
+   * Make a completion request with a document (PDF) attached
+   */
+  async makeRequestWithDocument(prompt: string, documentBuffer: Buffer, options?: Partial<OpenRouterRequest>): Promise<ModelResponse> {
+    // Convert PDF to base64 for inclusion in the prompt
+    const base64Document = documentBuffer.toString('base64');
+    
+    // Create enhanced prompt that includes the document
+    const enhancedPrompt = `${prompt}
+
+DOCUMENT CONTENT (PDF as base64):
+${base64Document}
+
+Please analyze the above PDF document and extract the requested information.`;
+
+    // Use the regular makeRequest method with the enhanced prompt
+    return this.makeRequest(enhancedPrompt, options);
+  }
+
+  /**
    * Test connection to OpenRouter API
    */
   async testConnection(): Promise<boolean> {

@@ -12,7 +12,10 @@ import {
     Case as CaseModel,
     AISummary as AISummaryModel,
     ActivityLog,
-    AIInteraction as AIInteractionModel
+    AIInteraction as AIInteractionModel,
+    ZoningPlan,
+    ZoningRequirement,
+    SearchCriteria
 } from '../types/index.js';
 import { randomUUID } from 'crypto';
 
@@ -419,6 +422,294 @@ export class DataService {
      */
     public transaction<T>(operations: () => T): T {
         return this.getDatabase().transaction(operations);
+    }
+
+    // Zoning Requirements Methods
+
+    /**
+     * Save a zoning plan to the database
+     */
+    public async saveZoningPlan(plan: ZoningPlan): Promise<void> {
+        try {
+            this.transaction(() => {
+                // Check for duplicate document hash (but allow updates to same plan ID)
+                const duplicateCheck = this.getDatabase().prepare(`
+                    SELECT id FROM zoning_plans WHERE document_hash = ? AND id != ?
+                `);
+                const duplicate = duplicateCheck.get(plan.documentHash, plan.id);
+                
+                if (duplicate) {
+                    throw new Error(`A zoning plan with document hash ${plan.documentHash} already exists`);
+                }
+
+                // Save the zoning plan
+                const planStmt = this.getDatabase().prepare(`
+                    INSERT OR REPLACE INTO zoning_plans (
+                        id, name, document_path, document_hash, jurisdiction, 
+                        effective_date, version, extraction_metadata, created_at, updated_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                `);
+
+                const result = planStmt.run(
+                    plan.id,
+                    plan.name,
+                    plan.documentPath,
+                    plan.documentHash,
+                    plan.jurisdiction,
+                    plan.effectiveDate.toISOString(),
+                    plan.version,
+                    JSON.stringify(plan.extractionMetadata),
+                    plan.createdAt.toISOString(),
+                    plan.updatedAt.toISOString()
+                );
+
+                if (result.changes === 0) {
+                    throw new Error(`Failed to save zoning plan with ID: ${plan.id}`);
+                }
+
+                // Save the zoning requirements
+                if (plan.requirements && plan.requirements.length > 0) {
+                    const reqStmt = this.getDatabase().prepare(`
+                        INSERT OR REPLACE INTO zoning_requirements (
+                            id, plan_id, category, subcategory, requirement, description,
+                            criteria, reference_docs, priority, applicable_zones, created_at, updated_at
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    `);
+
+                    for (const requirement of plan.requirements) {
+                        reqStmt.run(
+                            requirement.id,
+                            requirement.planId,
+                            requirement.category,
+                            requirement.subcategory || null,
+                            requirement.requirement,
+                            requirement.description,
+                            JSON.stringify(requirement.criteria),
+                            JSON.stringify(requirement.references),
+                            requirement.priority,
+                            JSON.stringify(requirement.applicableZones),
+                            requirement.createdAt.toISOString(),
+                            requirement.updatedAt.toISOString()
+                        );
+                    }
+                }
+            });
+        } catch (error) {
+            throw new Error(`Failed to save zoning plan: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+    }
+
+    /**
+     * Get a zoning plan by ID with all requirements
+     */
+    public async getZoningPlan(planId: string): Promise<ZoningPlan | null> {
+        try {
+            const planStmt = this.getDatabase().prepare(`
+                SELECT * FROM zoning_plans WHERE id = ?
+            `);
+
+            const planRow = planStmt.get(planId) as any;
+
+            if (!planRow) {
+                return null;
+            }
+
+            // Get requirements for this plan
+            const requirements = await this.getZoningRequirements(planId);
+
+            return {
+                id: planRow.id,
+                name: planRow.name,
+                documentPath: planRow.document_path,
+                documentHash: planRow.document_hash,
+                jurisdiction: planRow.jurisdiction,
+                effectiveDate: new Date(planRow.effective_date),
+                version: planRow.version,
+                requirements,
+                extractionMetadata: JSON.parse(planRow.extraction_metadata),
+                createdAt: new Date(planRow.created_at),
+                updatedAt: new Date(planRow.updated_at)
+            };
+        } catch (error) {
+            throw new Error(`Failed to get zoning plan: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+    }
+
+    /**
+     * Get zoning requirements for a plan
+     */
+    public async getZoningRequirements(planId: string): Promise<ZoningRequirement[]> {
+        try {
+            const stmt = this.getDatabase().prepare(`
+                SELECT * FROM zoning_requirements 
+                WHERE plan_id = ? 
+                ORDER BY category, subcategory, requirement
+            `);
+
+            const requirementRows = stmt.all(planId) as any[];
+
+            return requirementRows.map(row => ({
+                id: row.id,
+                planId: row.plan_id,
+                category: row.category,
+                subcategory: row.subcategory,
+                requirement: row.requirement,
+                description: row.description,
+                criteria: JSON.parse(row.criteria),
+                references: JSON.parse(row.reference_docs),
+                priority: row.priority,
+                applicableZones: JSON.parse(row.applicable_zones),
+                createdAt: new Date(row.created_at),
+                updatedAt: new Date(row.updated_at)
+            }));
+        } catch (error) {
+            throw new Error(`Failed to get zoning requirements: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+    }
+
+    /**
+     * Search zoning requirements with filtering
+     */
+    public async searchZoningRequirements(criteria: SearchCriteria): Promise<ZoningRequirement[]> {
+        try {
+            let sql = `
+                SELECT zr.* FROM zoning_requirements zr
+                JOIN zoning_plans zp ON zr.plan_id = zp.id
+                WHERE 1=1
+            `;
+            const params: any[] = [];
+
+            if (criteria.planId) {
+                sql += ' AND zr.plan_id = ?';
+                params.push(criteria.planId);
+            }
+
+            if (criteria.category) {
+                sql += ' AND zr.category = ?';
+                params.push(criteria.category);
+            }
+
+            if (criteria.priority) {
+                sql += ' AND zr.priority = ?';
+                params.push(criteria.priority);
+            }
+
+            if (criteria.jurisdiction) {
+                sql += ' AND zp.jurisdiction = ?';
+                params.push(criteria.jurisdiction);
+            }
+
+            if (criteria.textSearch) {
+                sql += ' AND (zr.requirement LIKE ? OR zr.description LIKE ?)';
+                const searchTerm = `%${criteria.textSearch}%`;
+                params.push(searchTerm, searchTerm);
+            }
+
+            if (criteria.applicableZones && criteria.applicableZones.length > 0) {
+                // Search for any of the specified zones in the JSON array
+                const zoneConditions = criteria.applicableZones.map(() => 'zr.applicable_zones LIKE ?').join(' OR ');
+                sql += ` AND (${zoneConditions})`;
+                criteria.applicableZones.forEach(zone => {
+                    params.push(`%"${zone}"%`);
+                });
+            }
+
+            sql += ' ORDER BY zr.category, zr.subcategory, zr.requirement';
+
+            const stmt = this.getDatabase().prepare(sql);
+            const requirementRows = stmt.all(...params) as any[];
+
+            return requirementRows.map(row => ({
+                id: row.id,
+                planId: row.plan_id,
+                category: row.category,
+                subcategory: row.subcategory,
+                requirement: row.requirement,
+                description: row.description,
+                criteria: JSON.parse(row.criteria),
+                references: JSON.parse(row.reference_docs),
+                priority: row.priority,
+                applicableZones: JSON.parse(row.applicable_zones),
+                createdAt: new Date(row.created_at),
+                updatedAt: new Date(row.updated_at)
+            }));
+        } catch (error) {
+            throw new Error(`Failed to search zoning requirements: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+    }
+
+    /**
+     * Update a zoning requirement
+     */
+    public async updateZoningRequirement(requirementId: string, updates: Partial<ZoningRequirement>): Promise<void> {
+        try {
+            const updateFields: string[] = [];
+            const updateValues: any[] = [];
+
+            if (updates.category !== undefined) {
+                updateFields.push('category = ?');
+                updateValues.push(updates.category);
+            }
+
+            if (updates.subcategory !== undefined) {
+                updateFields.push('subcategory = ?');
+                updateValues.push(updates.subcategory);
+            }
+
+            if (updates.requirement !== undefined) {
+                updateFields.push('requirement = ?');
+                updateValues.push(updates.requirement);
+            }
+
+            if (updates.description !== undefined) {
+                updateFields.push('description = ?');
+                updateValues.push(updates.description);
+            }
+
+            if (updates.criteria !== undefined) {
+                updateFields.push('criteria = ?');
+                updateValues.push(JSON.stringify(updates.criteria));
+            }
+
+            if (updates.references !== undefined) {
+                updateFields.push('reference_docs = ?');
+                updateValues.push(JSON.stringify(updates.references));
+            }
+
+            if (updates.priority !== undefined) {
+                updateFields.push('priority = ?');
+                updateValues.push(updates.priority);
+            }
+
+            if (updates.applicableZones !== undefined) {
+                updateFields.push('applicable_zones = ?');
+                updateValues.push(JSON.stringify(updates.applicableZones));
+            }
+
+            // Always update the updated_at timestamp
+            updateFields.push('updated_at = ?');
+            updateValues.push(new Date().toISOString());
+
+            if (updateFields.length === 1) { // Only updated_at was added
+                throw new Error('No valid fields to update');
+            }
+
+            updateValues.push(requirementId); // For WHERE clause
+
+            const stmt = this.getDatabase().prepare(`
+                UPDATE zoning_requirements 
+                SET ${updateFields.join(', ')} 
+                WHERE id = ?
+            `);
+
+            const result = stmt.run(...updateValues);
+
+            if (result.changes === 0) {
+                throw new Error(`Zoning requirement with ID ${requirementId} not found`);
+            }
+        } catch (error) {
+            throw new Error(`Failed to update zoning requirement: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
     }
 
     // Private helper methods

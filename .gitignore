@@ -85,5 +85,6 @@ backend/test-*.js
 
 # Frontend test files
 frontend/test-*.js
+backend/test_data
 
 # Documentation
