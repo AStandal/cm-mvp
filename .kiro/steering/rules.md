@@ -17,3 +17,4 @@
 - When implementing a new API, remember to update existing API tests to reflect the newly implemented API.
 - If you create a new test during task development, then that test must pass test execution before you can finish the task.
 - When creating tests (either unit, API, or E2E tests) make sure you follow the same patterns and test scope strategy as existing tests for your test category (unit, API, or E2E).
+- When creating new design specs, always make sure the new design aligns with the other existing spec designs and current implementation.
